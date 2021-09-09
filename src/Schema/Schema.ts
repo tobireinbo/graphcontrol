@@ -1,4 +1,5 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
+import Util from "../util/Util";
 import Query from "./Query";
 
 //turns every prop of given Type in an optional one
@@ -66,7 +67,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     const _query = new Query().match("node", this._label);
 
     if (args?.where) {
-      Schema.objectToArray(args.where, (key) => {
+      Util.objectToArray(args.where, (key) => {
         _query.where("node", key, args.where[key]);
       });
     }
@@ -158,10 +159,10 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     }
 
     const _query = new Query().match("node", this._label);
-    Schema.objectToArray(where, (key) => {
+    Util.objectToArray(where, (key) => {
       _query.where("node", key, where[key]);
     });
-    Schema.objectToArray(data, (key) => {
+    Util.objectToArray(data, (key) => {
       _query.set("node", key, data[key]);
     });
 
@@ -197,7 +198,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     const _query = new Query().match("node", this._label);
 
-    Schema.objectToArray(where, (key) => {
+    Util.objectToArray(where, (key) => {
       _query.where("node", key, where[key]);
     });
     _query.delete(["node"], true);
@@ -251,12 +252,12 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     const _query = new Query();
 
     _query.match("n1", this._label);
-    Schema.objectToArray(where, (key) => {
+    Util.objectToArray(where, (key) => {
       _query.where("n1", key, where[key]);
     });
 
     _query.match("n2", dstLabel);
-    Schema.objectToArray(relation.destination.where, (key) => {
+    Util.objectToArray(relation.destination.where, (key) => {
       _query.where("n2", key, relation.destination.where[key]);
     });
 
@@ -335,7 +336,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
   ): { [key: string]: unknown } {
     let data = {};
     where &&
-      Schema.objectToArray(where, (key) => {
+      Util.objectToArray(where, (key) => {
         query.where(varName, key, varName + key);
         data = {
           ...data,
@@ -355,7 +356,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
   async checkMatch(where: Optional<Properties>): Promise<boolean> {
     try {
       const _query = new Query().match("n", this._label);
-      Schema.objectToArray(where, (key) => {
+      Util.objectToArray(where, (key) => {
         _query.where("n", key, where[key]);
       });
       const exeQuery = await this._neo4jProvider.query(
@@ -389,20 +390,6 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     });
 
     return legal;
-  }
-
-  /**
-   * iterate over an object. Specify the action at each step via callback function
-   * @param object
-   * @param cb
-   */
-  static objectToArray(
-    object: { [key: string]: unknown },
-    cb: (key: string, index: number, length: number) => void
-  ): void {
-    const dataKeysAsArray = Object.keys(object);
-    const length = dataKeysAsArray.length || 0;
-    dataKeysAsArray.map((key, index) => cb(key, index, length));
   }
 
   private Logger(query: string, data: {}) {

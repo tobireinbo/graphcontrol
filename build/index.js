@@ -114,6 +114,18 @@ var Neo4jProvider = /** @class */ (function () {
             });
         });
     };
+    Neo4jProvider.prototype.closeDriver = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this._driver.close()];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     /**
      * formats the matched data into a d3 graph format.
      * all nodes are stored in an array while their relations are stored
@@ -135,10 +147,7 @@ var Neo4jProvider = /** @class */ (function () {
                         return [4 /*yield*/, this.query("\n      match query=" + match + "\n      unwind nodes(query) as ns unwind relationships(query) as rs\n      with collect( distinct {node: toString(ID(ns)),labels: labels(ns), name: toString(ns.name), _id: ns._id}) as nl, \n      collect(distinct {source: toString(ID(startNode(rs))), target: toString(ID(endNode(rs)))}) as rl\n      return {nodes: nl, links: rl}\n      ", params)];
                     case 2:
                         exeQuery = _b.sent();
-                        return [2 /*return*/, Neo4jProvider.formatRecords({
-                                data: exeQuery,
-                                keepSingleEntryInArray: true,
-                            })];
+                        return [2 /*return*/, Neo4jProvider.formatRecords(exeQuery)];
                     case 3:
                         _b.sent();
                         return [2 /*return*/, undefined];
@@ -231,8 +240,7 @@ var Neo4jProvider = /** @class */ (function () {
      * @param data object returned by query
      * @returns an array of the formatted data
      */
-    Neo4jProvider.formatRecords = function (args) {
-        var data = args.data, keepSingleEntryInArray = args.keepSingleEntryInArray;
+    Neo4jProvider.formatRecords = function (data) {
         var formattedEntries = data.records.map(function (record) {
             if (record.length > 1) {
                 var formatted = record.forEach(function (f) {
@@ -246,12 +254,129 @@ var Neo4jProvider = /** @class */ (function () {
                 return formatted;
             }
         });
-        if (formattedEntries.length < 2 && !keepSingleEntryInArray) {
-            return formattedEntries[0];
-        }
         return formattedEntries;
     };
     return Neo4jProvider;
+}());
+
+var Util = /** @class */ (function () {
+    function Util() {
+    }
+    /**
+     * iterate over an object. Specify the action at each step via callback function
+     * @param object
+     * @param cb
+     */
+    Util.objectToArray = function (object, cb) {
+        var dataKeysAsArray = Object.keys(object);
+        var length = dataKeysAsArray.length || 0;
+        dataKeysAsArray.map(function (key, index) { return cb(key, index, length); });
+    };
+    return Util;
+}());
+
+var Query = /** @class */ (function () {
+    function Query() {
+        this.query = "";
+        this.data = {};
+        this.dataKeyCounter = 0;
+    }
+    Query.prototype.get = function (returns) {
+        if (returns) {
+            return this.query + (" RETURN " + returns);
+        }
+        return this.query;
+    };
+    Query.prototype.match = function (varName, label, properties, optional) {
+        this.insertWhiteSpace();
+        this.query += (optional ? "OPTIONAL " : "") + "MATCH ";
+        this.node(varName, label, properties);
+        this._lastSyntax = "match";
+        return this;
+    };
+    Query.prototype.optionalMatch = function (varName, label, properties) {
+        this.match(varName, label, properties, true);
+        return this;
+    };
+    Query.prototype.create = function (varName, label, properties) {
+        this.insertWhiteSpace();
+        this.query += "CREATE ";
+        this.node(varName, label, properties);
+        this._lastSyntax = "create";
+        return this;
+    };
+    Query.prototype.node = function (varName, label, properties) {
+        var _this = this;
+        var props = "";
+        properties &&
+            Util.objectToArray(properties, function (key, index, length) {
+                var dataKey = _this.addToData(key, properties[key]);
+                if (index === 0)
+                    props += " {";
+                props += key + ": $" + dataKey;
+                if (index < length - 1)
+                    props += ", ";
+                else
+                    props += "}";
+            });
+        this.query += "(" + (varName ? varName : "") + (label ? ":" + label : "") + props + ")";
+        this._lastSyntax = "node";
+        return this;
+    };
+    Query.prototype.merge = function (var1, var2, relVar, relLabel, direction) {
+        this.insertWhiteSpace();
+        this.query += "MERGE ";
+        this.node(var1).relatation(relVar, relLabel, direction).node(var2);
+        this._lastSyntax = "merge";
+        return this;
+    };
+    Query.prototype.relatation = function (varName, label, direction) {
+        var isTo = direction === "to" || direction === ">";
+        //prettier-ignore
+        this.query += (!isTo ? "<" : "") + "-[" + (varName ? varName : "") + (label ? ":" + label : "") + "]-" + (isTo ? ">" : "");
+        this._lastSyntax = "relation";
+        return this;
+    };
+    Query.prototype.where = function (varName, key, value, not) {
+        this.insertWhiteSpace();
+        var dataKey = this.addToData(key, value);
+        this.query += "WHERE" + (not ? " NOT" : "") + " " + varName + "." + key + " = $" + dataKey;
+        this._lastSyntax = "where";
+        return this;
+    };
+    Query.prototype.set = function (varName, key, value) {
+        this.insertWhiteSpace();
+        var dataKey = this.addToData(key, value);
+        this.query += "SET " + varName + "." + key + " = $" + dataKey;
+        this._lastSyntax = "set";
+        return this;
+    };
+    Query.prototype.delete = function (vars, detach) {
+        var _this = this;
+        this.insertWhiteSpace();
+        this.query += (detach ? "DETACH " : "") + "DELETE ";
+        vars.forEach(function (v, index) {
+            _this.query += v;
+            if (index < vars.length - 1) {
+                _this.query += ", ";
+            }
+        });
+        this._lastSyntax = "delete";
+        return this;
+    };
+    Query.prototype.addToData = function (key, value) {
+        var _a;
+        var uniqueKey = key + this.dataKeyCounter;
+        Object.assign(this.data, (_a = {}, _a[uniqueKey] = value, _a));
+        this.dataKeyCounter++;
+        return uniqueKey;
+    };
+    Query.prototype.insertWhiteSpace = function () {
+        if (this._lastSyntax && !(this._lastSyntax === "relation")) {
+            this.query += " ";
+        }
+    };
+    return Query;
 }());
 
 var ErrorMessages;
@@ -280,55 +405,52 @@ var Schema = /** @class */ (function () {
      * @returns
      */
     Schema.prototype.getNodes = function (args) {
-        var _a;
         return __awaiter(this, void 0, void 0, function () {
-            var where, includeRelatedNodes, whereConstruct, optionalMatch, optionalReturn, query, exeQuery;
+            var _query, returnString, exeQuery;
             var _this = this;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        where = args.where, includeRelatedNodes = args.includeRelatedNodes;
                         //check inputs
-                        if (where && !Schema.checkInputs(where)) {
+                        if ((args === null || args === void 0 ? void 0 : args.where) && !Schema.checkInputs(args.where)) {
                             return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
                         }
-                        whereConstruct = where
-                            ? this.whereConstructor("node", where)
-                            : { query: "", data: {} };
-                        optionalMatch = "";
-                        optionalReturn = "";
-                        if (includeRelatedNodes) {
-                            (_a = this._relations) === null || _a === void 0 ? void 0 : _a.forEach(function (rel, index) {
-                                if (index === 0) {
-                                    optionalReturn = "{.*";
-                                }
+                        _query = new Query().match("node", this._label);
+                        if (args === null || args === void 0 ? void 0 : args.where) {
+                            Util.objectToArray(args.where, function (key) {
+                                _query.where("node", key, args.where[key]);
+                            });
+                        }
+                        returnString = "node";
+                        if (args === null || args === void 0 ? void 0 : args.includeRelatedNodes) {
+                            this._relations.forEach(function (rel, index) {
                                 var dstLabel = rel.schema === Schema.Self ? _this._label : rel.schema;
-                                optionalMatch += "OPTIONAL MATCH (node)-[:" + rel.label + "]->(dst" + index + ":" + dstLabel + ") ";
-                                optionalReturn += ", " + dstLabel + ": collect(DISTINCT dst" + index + "{.*})";
+                                _query
+                                    .optionalMatch("node")
+                                    .relatation(undefined, rel.label, ">")
+                                    .node("dst" + index, dstLabel);
+                                if (index === 0) {
+                                    returnString = "{.*";
+                                }
+                                returnString += ", " + dstLabel + ": collect(DISTINCT dst" + index + "{.*})";
                                 if (_this._relations && index === _this._relations.length - 1) {
-                                    optionalReturn += "}";
+                                    returnString += "}";
                                 }
                             });
                         }
-                        query = "MATCH (node:" + this._label + ") " + whereConstruct.query + " " + optionalMatch + " return node" + optionalReturn;
-                        if (this.__queryLogs) {
-                            console.log(query);
-                        }
-                        _c.label = 1;
+                        this.Logger(_query.get(returnString), _query.data);
+                        _b.label = 1;
                     case 1:
-                        _c.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this._neo4jProvider.query(query, __assign({}, whereConstruct.data))];
+                        _b.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, this._neo4jProvider.query(_query.get(returnString), _query.data)];
                     case 2:
-                        exeQuery = _c.sent();
+                        exeQuery = _b.sent();
                         return [2 /*return*/, {
-                                data: Neo4jProvider.formatRecords({
-                                    data: exeQuery,
-                                    keepSingleEntryInArray: true,
-                                }),
+                                data: Neo4jProvider.formatRecords(exeQuery),
                                 error: undefined,
                             }];
                     case 3:
-                        _c.sent();
+                        _b.sent();
                         return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
                     case 4: return [2 /*return*/];
                 }
@@ -342,7 +464,7 @@ var Schema = /** @class */ (function () {
      */
     Schema.prototype.createNode = function (args) {
         return __awaiter(this, void 0, void 0, function () {
-            var data, props, query, exeQuery, result;
+            var data, _query, exeQuery, result;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -351,34 +473,15 @@ var Schema = /** @class */ (function () {
                         if (data && !Schema.checkInputs(data)) {
                             return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
                         }
-                        props = "";
-                        Schema.objectToArray(data, function (key, index, length) {
-                            if (index === 0) {
-                                props += "{";
-                            }
-                            props += key + ": $" + key;
-                            if (index !== length - 1) {
-                                props += ", ";
-                            }
-                            else {
-                                props += "}";
-                            }
-                        });
-                        query = "CREATE (node:" + this._label + " " + props + ") return node";
-                        if (this.__queryLogs) {
-                            console.log(query);
-                        }
+                        _query = new Query().create("node", this._label, data);
+                        this.Logger(_query.get("node"), __assign({}, data));
                         _b.label = 1;
                     case 1:
                         _b.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this._neo4jProvider.query(query, __assign({}, data))];
+                        return [4 /*yield*/, this._neo4jProvider.query(_query.get("node"), _query.data)];
                     case 2:
                         exeQuery = _b.sent();
-                        result = Neo4jProvider.formatRecords({
-                            data: exeQuery,
-                            keepSingleEntryInArray: true,
-                        });
-                        //const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
+                        result = Neo4jProvider.formatRecords(exeQuery);
                         return [2 /*return*/, { data: result, error: undefined }];
                     case 3:
                         _b.sent();
@@ -395,7 +498,7 @@ var Schema = /** @class */ (function () {
      */
     Schema.prototype.updateNode = function (args) {
         return __awaiter(this, void 0, void 0, function () {
-            var where, data, setter, whereQuery, query, exeQuery, result;
+            var where, data, _query, exeQuery, result;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -407,30 +510,23 @@ var Schema = /** @class */ (function () {
                         if (data && !Schema.checkInputs(data)) {
                             return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
                         }
-                        setter = "";
-                        whereQuery = "";
-                        Schema.objectToArray(data, function (key, index) {
-                            setter += "SET node." + key + "=$" + key + " ";
+                        _query = new Query().match("node", this._label);
+                        Util.objectToArray(where, function (key) {
+                            _query.where("node", key, where[key]);
                         });
-                        Schema.objectToArray(where, function (key, index, length) {
-                            whereQuery += "WHERE node." + key + " = $" + key + " ";
+                        Util.objectToArray(data, function (key) {
+                            _query.set("node", key, data[key]);
                         });
-                        query = "MATCH (node:" + this._label + ") " + whereQuery + " " + setter + " RETURN node";
-                        if (this.__queryLogs) {
-                            console.log(query);
-                        }
+                        this.Logger(_query.get("node"), __assign(__assign({}, data), where));
                         _b.label = 1;
                     case 1:
                         _b.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this._neo4jProvider.query(query, __assign(__assign({}, data), where))];
+                        return [4 /*yield*/, this._neo4jProvider.query(_query.get("node"), _query.data)];
                     case 2:
                         exeQuery = _b.sent();
-                        result = Neo4jProvider.formatRecords({
-                            data: exeQuery,
-                            keepSingleEntryInArray: true,
-                        });
+                        result = Neo4jProvider.formatRecords(exeQuery);
                         //const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
-                        return [2 /*return*/, { data: result[0], error: undefined }];
+                        return [2 /*return*/, { data: result, error: undefined }];
                     case 3:
                         _b.sent();
                         return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
@@ -446,7 +542,7 @@ var Schema = /** @class */ (function () {
      */
     Schema.prototype.deleteNode = function (args) {
         return __awaiter(this, void 0, void 0, function () {
-            var where, whereQuery, query, exeQuery, confirm_1;
+            var where, _query, exeQuery, confirm_1;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -455,18 +551,16 @@ var Schema = /** @class */ (function () {
                         if (where && !Schema.checkInputs(where)) {
                             return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
                         }
-                        whereQuery = "";
-                        Schema.objectToArray(where, function (key) {
-                            whereQuery += "WHERE node." + key + "=$" + key + " ";
+                        _query = new Query().match("node", this._label);
+                        Util.objectToArray(where, function (key) {
+                            _query.where("node", key, where[key]);
                         });
-                        query = "MATCH (node:" + this._label + ") " + whereQuery + " DETACH DELETE node";
-                        if (this.__queryLogs) {
-                            console.log(query);
-                        }
+                        _query.delete(["node"], true);
+                        this.Logger(_query.get(), __assign({}, where));
                         _b.label = 1;
                     case 1:
                         _b.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this._neo4jProvider.query(query, __assign({}, where))];
+                        return [4 /*yield*/, this._neo4jProvider.query(_query.get(), _query.data)];
                     case 2:
                         exeQuery = _b.sent();
                         confirm_1 = Neo4jProvider.confirmUpdate(exeQuery, "node");
@@ -486,7 +580,7 @@ var Schema = /** @class */ (function () {
      */
     Schema.prototype.createStaticRelation = function (args) {
         return __awaiter(this, void 0, void 0, function () {
-            var where, relation, n2WhereQuery, n1WhereQuery, dstLabel, mergeQuery, query, exeQuery;
+            var where, relation, dstLabel, _query, exeQuery;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -499,22 +593,24 @@ var Schema = /** @class */ (function () {
                             !Schema.checkInputs(relation.destination.where)) {
                             return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
                         }
-                        _b.label = 1;
-                    case 1:
-                        _b.trys.push([1, 3, , 4]);
-                        n2WhereQuery = this.whereConstructor("n2", relation.destination.where);
-                        n1WhereQuery = this.whereConstructor("n1", where);
                         dstLabel = relation.destination.schema === Schema.Self
                             ? this._label
                             : relation.destination.schema;
-                        mergeQuery = relation.direction === "to"
-                            ? "-[r:" + relation.label + "]->"
-                            : relation.direction === "from" && "<-[r:" + relation.label + "]-";
-                        query = "MATCH (n1:" + this._label + ") " + n1WhereQuery.query + " MATCH (n2:" + dstLabel + ") " + n2WhereQuery.query + " MERGE (n1)" + mergeQuery + "(n2) return r";
-                        if (this.__queryLogs) {
-                            console.log(query);
-                        }
-                        return [4 /*yield*/, this._neo4jProvider.query(query, __assign(__assign({}, n1WhereQuery.data), n2WhereQuery.data))];
+                        _query = new Query();
+                        _query.match("n1", this._label);
+                        Util.objectToArray(where, function (key) {
+                            _query.where("n1", key, where[key]);
+                        });
+                        _query.match("n2", dstLabel);
+                        Util.objectToArray(relation.destination.where, function (key) {
+                            _query.where("n2", key, relation.destination.where[key]);
+                        });
+                        _query.merge("n1", "n2", "r", relation.label, relation.direction);
+                        this.Logger(_query.get("r"), _query.data);
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, this._neo4jProvider.query(_query.get("r"), _query.data)];
                     case 2:
                         exeQuery = _b.sent();
                         return [2 /*return*/, {
@@ -584,19 +680,20 @@ var Schema = /** @class */ (function () {
     };
     /**
      * constructs a query string and data object for a given where object
+     * @deprecated
      * @param varName
      * @param where
      * @returns
      */
-    Schema.prototype.whereConstructor = function (varName, where) {
-        var query = "";
+    Schema.prototype.whereConstructor = function (query, varName, where) {
         var data = {};
-        Schema.objectToArray(where, function (key) {
-            var _a;
-            query += "WHERE " + varName + "." + key + "=$" + (varName + key) + " ";
-            data = __assign(__assign({}, data), (_a = {}, _a[varName + key] = where[key], _a));
-        });
-        return { query: query, data: data };
+        where &&
+            Util.objectToArray(where, function (key) {
+                var _a;
+                query.where(varName, key, varName + key);
+                data = __assign(__assign({}, data), (_a = {}, _a[varName + key] = where[key], _a));
+            });
+        return data;
     };
     /**
      * executes a match query with the given where properties
@@ -606,14 +703,16 @@ var Schema = /** @class */ (function () {
      */
     Schema.prototype.checkMatch = function (where) {
         return __awaiter(this, void 0, void 0, function () {
-            var whereConstruct, query, exeQuery;
+            var _query_1, exeQuery;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         _b.trys.push([0, 2, , 3]);
-                        whereConstruct = this.whereConstructor("n", where);
-                        query = "match (n:" + this._label + ") " + whereConstruct.query + " return n";
-                        return [4 /*yield*/, this._neo4jProvider.query(query, whereConstruct.data)];
+                        _query_1 = new Query().match("n", this._label);
+                        Util.objectToArray(where, function (key) {
+                            _query_1.where("n", key, where[key]);
+                        });
+                        return [4 /*yield*/, this._neo4jProvider.query(_query_1.get("n"), _query_1.data)];
                     case 1:
                         exeQuery = _b.sent();
                         if (exeQuery.records.length < 1) {
@@ -635,26 +734,22 @@ var Schema = /** @class */ (function () {
      * @param data
      */
     Schema.checkInputs = function (data) {
-        var regex = new RegExp("^([a-zA-Z0-9 .:_-]+)$"); //only allow a-z, A-Z, 0-9 and spaces, underscores, dashes
+        var regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
         var legal = true;
         Object.keys(data).forEach(function (key) {
             var currentData = String(data[key]);
-            if (!regex.test(currentData)) {
+            if (regex.test(currentData)) {
                 console.log("illegal prop", currentData);
                 legal = false;
             }
         });
         return legal;
     };
-    /**
-     * iterate over an object. Specify the action at each step via callback function
-     * @param object
-     * @param cb
-     */
-    Schema.objectToArray = function (object, cb) {
-        var dataKeysAsArray = Object.keys(object);
-        var length = dataKeysAsArray.length || 0;
-        dataKeysAsArray.map(function (key, index) { return cb(key, index, length); });
+    Schema.prototype.Logger = function (query, data) {
+        if (this.__queryLogs) {
+            console.log("QUERY::::::", query);
+            console.log("DATA::::::", data);
+        }
     };
     Schema.Self = "__self__";
     return Schema;

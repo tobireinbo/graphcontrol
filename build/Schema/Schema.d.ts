@@ -33,7 +33,7 @@ export default class Schema<Properties = {
      * @param args
      * @returns
      */
-    getNodes(args: {
+    getNodes(args?: {
         where?: Optional<Properties>;
         includeRelatedNodes?: boolean;
     }): Promise<Result<Array<Properties>>>;
@@ -92,6 +92,7 @@ export default class Schema<Properties = {
     updateRelation(): Promise<void>;
     /**
      * constructs a query string and data object for a given where object
+     * @deprecated
      * @param varName
      * @param where
      * @returns
@@ -109,13 +110,6 @@ export default class Schema<Properties = {
      * @param data
      */
     private static checkInputs;
-    /**
-     * iterate over an object. Specify the action at each step via callback function
-     * @param object
-     * @param cb
-     */
-    static objectToArray(object: {
-        [key: string]: unknown;
-    }, cb: (key: string, index: number, length: number) => void): void;
+    private Logger;
 }
 export {};

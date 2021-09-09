@@ -17,6 +17,7 @@ export default class Neo4jProvider {
     query(cypher: string, params: undefined | {
         [key: string]: unknown;
     }): Promise<QueryResult>;
+    closeDriver(): Promise<void>;
     /**
      * formats the matched data into a d3 graph format.
      * all nodes are stored in an array while their relations are stored
@@ -30,7 +31,7 @@ export default class Neo4jProvider {
         params: {
             [key: string]: unknown;
         };
-    }): Promise<any>;
+    }): Promise<any[]>;
     /**
      * formats the matched nodes into a nested tree structure.
      * apoc is required to use this function.
@@ -65,8 +66,5 @@ export default class Neo4jProvider {
      * @param data object returned by query
      * @returns an array of the formatted data
      */
-    static formatRecords(args: {
-        data: QueryResult;
-        keepSingleEntryInArray: boolean;
-    }): any;
+    static formatRecords(data: QueryResult): any[];
 }

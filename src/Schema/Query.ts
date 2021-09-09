@@ -1,4 +1,4 @@
-import { Schema } from "..";
+import Util from "../util/Util";
 
 type Properties = { [key: string]: any };
 type Direction = "to" | "from" | ">" | "<";
@@ -62,7 +62,7 @@ export default class Query {
   node(varName?: string, label?: string, properties?: Properties) {
     let props = "";
     properties &&
-      Schema.objectToArray(properties, (key, index, length) => {
+      Util.objectToArray(properties, (key, index, length) => {
         const dataKey = this.addToData(key, properties[key]);
         if (index === 0) props += ` {`;
         props += `${key}: $${dataKey}`;
