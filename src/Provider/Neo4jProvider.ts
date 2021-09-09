@@ -43,6 +43,10 @@ export default class Neo4jProvider {
     }
   }
 
+  async closeDriver() {
+    await this._driver.close();
+  }
+
   /**
    * formats the matched data into a d3 graph format.
    * all nodes are stored in an array while their relations are stored
@@ -68,10 +72,7 @@ export default class Neo4jProvider {
         params
       );
 
-      return Neo4jProvider.formatRecords({
-        data: exeQuery,
-        keepSingleEntryInArray: true,
-      });
+      return Neo4jProvider.formatRecords(exeQuery);
     } catch {
       return undefined;
     }
@@ -165,12 +166,7 @@ export default class Neo4jProvider {
    * @param data object returned by query
    * @returns an array of the formatted data
    */
-  static formatRecords(args: {
-    data: QueryResult;
-    keepSingleEntryInArray: boolean;
-  }) {
-    const { data, keepSingleEntryInArray } = args;
-
+  static formatRecords(data: QueryResult) {
     const formattedEntries = data.records.map((record) => {
       if (record.length > 1) {
         const formatted = record.forEach((f) =>
@@ -185,9 +181,6 @@ export default class Neo4jProvider {
       }
     });
 
-    if (formattedEntries.length < 2 && !keepSingleEntryInArray) {
-      return formattedEntries[0];
-    }
     return formattedEntries;
   }
 }

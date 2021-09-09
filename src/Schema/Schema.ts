@@ -98,10 +98,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
       });
 
       return {
-        data: Neo4jProvider.formatRecords({
-          data: exeQuery,
-          keepSingleEntryInArray: true,
-        }),
+        data: Neo4jProvider.formatRecords(exeQuery),
         error: undefined,
       };
     } catch {
@@ -147,10 +144,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
       const exeQuery = await this._neo4jProvider.query(query, {
         ...data,
       });
-      const result = Neo4jProvider.formatRecords({
-        data: exeQuery,
-        keepSingleEntryInArray: true,
-      });
+      const result = Neo4jProvider.formatRecords(exeQuery);
       //const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
       return { data: result, error: undefined };
     } catch {
@@ -197,12 +191,9 @@ export default class Schema<Properties = { [key: string]: unknown }> {
         ...data,
         ...where,
       });
-      const result = Neo4jProvider.formatRecords({
-        data: exeQuery,
-        keepSingleEntryInArray: true,
-      });
+      const result = Neo4jProvider.formatRecords(exeQuery);
       //const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
-      return { data: result[0], error: undefined };
+      return { data: result, error: undefined };
     } catch {
       return { data: undefined, error: ErrorMessages.server };
     }
@@ -399,12 +390,12 @@ export default class Schema<Properties = { [key: string]: unknown }> {
    * @param data
    */
   private static checkInputs(data: Optional<_Properties> | _Properties) {
-    const regex = new RegExp("^([a-zA-Z0-9 .:_-]+)$"); //only allow a-z, A-Z, 0-9 and spaces, underscores, dashes
+    const regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
     let legal = true;
 
     Object.keys(data).forEach((key: string) => {
       const currentData = String(data[key]);
-      if (!regex.test(currentData)) {
+      if (regex.test(currentData)) {
         console.log("illegal prop", currentData);
         legal = false;
       }
