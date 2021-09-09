@@ -6,7 +6,8 @@ import { ErrorMessages } from "./Schema";
 const testSchema = new Schema<{ uid: string; title: string; rating: number }>(
   provider,
   "Test",
-  [{ schema: Schema.Self, label: "HAS_TEST", id: "self rel" }]
+  [{ schema: Schema.Self, label: "HAS_TEST", id: "self rel" }],
+  true
 );
 
 const singleNode = { title: "hello", rating: 2, uid: "123abc" };
@@ -25,9 +26,23 @@ test("create node", async () => {
   });
 });
 
+test("update node", async () => {
+  const result = await testSchema.updateNode({
+    where: { uid: "123abc" },
+    data: { rating: 5 },
+  });
+  expect(result).toStrictEqual({
+    data: [{ ...singleNode, rating: 5 }],
+    error: undefined,
+  });
+});
+
 test("get single node", async () => {
   const result = await testSchema.getNodes({ where: { uid: "123abc" } });
-  expect(result).toStrictEqual({ data: [singleNode], error: undefined });
+  expect(result).toStrictEqual({
+    data: [{ ...singleNode, rating: 5 }],
+    error: undefined,
+  });
 });
 
 test("delete node", async () => {
@@ -45,7 +60,7 @@ test("(setup) create multiple nodes", async () => {
 });
 
 test("get multiple nodes", async () => {
-  const result = await testSchema.getNodes({});
+  const result = await testSchema.getNodes();
   expect(result).toStrictEqual({
     data: [
       { title: "first", uid: "f", rating: 3 },
