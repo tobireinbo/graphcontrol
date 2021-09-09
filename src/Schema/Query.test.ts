@@ -22,9 +22,9 @@ test("comples", () => {
     .match("n", "Test", { title: "data" })
     .relatation("r", "HAS", ">")
     .node("m", "Test2", { rating: 0 })
-    .where("m", "id");
+    .where("m", "id", "123");
 
   expect(query.get()).toBe(
-    "MATCH (n:Test {title: $title})-[r:HAS]->(m:Test2 {rating: $rating}) WHERE m.id = $id"
+    "MATCH (n:Test {title: $title0})-[r:HAS]->(m:Test2 {rating: $rating1}) WHERE m.id = $id2"
   );
 });

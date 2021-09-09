@@ -65,7 +65,11 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     const _query = new Query().match("node", this._label);
 
-    const data = this.whereConstructor(_query, "node", args?.where);
+    if (args?.where) {
+      Schema.objectToArray(args.where, (key) => {
+        _query.where("node", key, args.where[key]);
+      });
+    }
     let returnString = "node";
     if (args?.includeRelatedNodes) {
       this._relations.forEach((rel, index) => {
@@ -86,14 +90,12 @@ export default class Schema<Properties = { [key: string]: unknown }> {
       });
     }
 
-    this.Logger(_query.get(returnString), { ...data });
+    this.Logger(_query.get(returnString), _query.data);
 
     try {
       const exeQuery = await this._neo4jProvider.query(
         _query.get(returnString),
-        {
-          ...data,
-        }
+        _query.data
       );
 
       return {
@@ -120,14 +122,15 @@ export default class Schema<Properties = { [key: string]: unknown }> {
       return { data: undefined, error: ErrorMessages.inputs };
     }
 
-    const _query = new Query().create("node", this._label, data).get("node");
+    const _query = new Query().create("node", this._label, data);
 
-    this.Logger(_query, { ...data });
+    this.Logger(_query.get("node"), { ...data });
 
     try {
-      const exeQuery = await this._neo4jProvider.query(_query, {
-        ...data,
-      });
+      const exeQuery = await this._neo4jProvider.query(
+        _query.get("node"),
+        _query.data
+      );
       const result = Neo4jProvider.formatRecords(exeQuery);
       return { data: result, error: undefined };
     } catch {
@@ -156,19 +159,19 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     const _query = new Query().match("node", this._label);
     Schema.objectToArray(where, (key) => {
-      _query.where("node", key);
+      _query.where("node", key, where[key]);
     });
     Schema.objectToArray(data, (key) => {
-      _query.set("node", key);
+      _query.set("node", key, data[key]);
     });
 
     this.Logger(_query.get("node"), { ...data, ...where });
 
     try {
-      const exeQuery = await this._neo4jProvider.query(_query.get("node"), {
-        ...data,
-        ...where,
-      });
+      const exeQuery = await this._neo4jProvider.query(
+        _query.get("node"),
+        _query.data
+      );
       const result = Neo4jProvider.formatRecords(exeQuery);
       //const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
       return { data: result, error: undefined };
@@ -195,16 +198,17 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     const _query = new Query().match("node", this._label);
 
     Schema.objectToArray(where, (key) => {
-      _query.where("node", key);
+      _query.where("node", key, where[key]);
     });
     _query.delete(["node"], true);
 
     this.Logger(_query.get(), { ...where });
 
     try {
-      const exeQuery = await this._neo4jProvider.query(_query.get(), {
-        ...where,
-      });
+      const exeQuery = await this._neo4jProvider.query(
+        _query.get(),
+        _query.data
+      );
 
       const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
       return { data: confirm, error: undefined };
@@ -247,24 +251,24 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     const _query = new Query();
 
     _query.match("n1", this._label);
-    const n1Data = this.whereConstructor(_query, "n1", where);
+    Schema.objectToArray(where, (key) => {
+      _query.where("n1", key, where[key]);
+    });
 
     _query.match("n2", dstLabel);
-    const n2Data = this.whereConstructor(
-      _query,
-      "n2",
-      relation.destination.where
-    );
+    Schema.objectToArray(relation.destination.where, (key) => {
+      _query.where("n2", key, relation.destination.where[key]);
+    });
 
     _query.merge("n1", "n2", "r", relation.label, relation.direction);
 
-    this.Logger(_query.get("r"), { ...n1Data, ...n2Data });
+    this.Logger(_query.get("r"), _query.data);
 
     try {
-      const exeQuery = await this._neo4jProvider.query(_query.get("r"), {
-        ...n1Data,
-        ...n2Data,
-      });
+      const exeQuery = await this._neo4jProvider.query(
+        _query.get("r"),
+        _query.data
+      );
       return {
         data: Neo4jProvider.confirmUpdate(exeQuery, "relation"),
         error: undefined,
@@ -319,6 +323,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
   /**
    * constructs a query string and data object for a given where object
+   * @deprecated
    * @param varName
    * @param where
    * @returns
@@ -350,8 +355,13 @@ export default class Schema<Properties = { [key: string]: unknown }> {
   async checkMatch(where: Optional<Properties>): Promise<boolean> {
     try {
       const _query = new Query().match("n", this._label);
-      const data = this.whereConstructor(_query, "n", where);
-      const exeQuery = await this._neo4jProvider.query(_query.get("n"), data);
+      Schema.objectToArray(where, (key) => {
+        _query.where("n", key, where[key]);
+      });
+      const exeQuery = await this._neo4jProvider.query(
+        _query.get("n"),
+        _query.data
+      );
       if (exeQuery.records.length < 1) {
         return false;
       } else {

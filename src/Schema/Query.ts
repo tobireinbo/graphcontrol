@@ -4,8 +4,9 @@ type Properties = { [key: string]: any };
 type Direction = "to" | "from" | ">" | "<";
 
 export default class Query {
-  query: string;
+  private query: string;
   data: { [key: string]: unknown };
+  private dataKeyCounter: number;
   private _lastSyntax:
     | "match"
     | "relation"
@@ -18,6 +19,7 @@ export default class Query {
   constructor() {
     this.query = "";
     this.data = {};
+    this.dataKeyCounter = 0;
   }
 
   get(returns?: string) {
@@ -61,8 +63,9 @@ export default class Query {
     let props = "";
     properties &&
       Schema.objectToArray(properties, (key, index, length) => {
+        const dataKey = this.addToData(key, properties[key]);
         if (index === 0) props += ` {`;
-        props += `${key}: $${key}`;
+        props += `${key}: $${dataKey}`;
         if (index < length - 1) props += ", ";
         else props += "}";
       });
@@ -93,21 +96,21 @@ export default class Query {
     return this;
   }
 
-  where(varName: string, key: string, param?: string, not?: boolean) {
+  where(varName: string, key: string, value: unknown, not?: boolean) {
     this.insertWhiteSpace();
 
-    this.query += `WHERE${not ? " NOT" : ""} ${varName}.${key} = $${
-      param ? param : key
-    }`;
+    const dataKey = this.addToData(key, value);
+    this.query += `WHERE${not ? " NOT" : ""} ${varName}.${key} = $${dataKey}`;
 
     this._lastSyntax = "where";
     return this;
   }
 
-  set(varName: string, key: string, param?: string) {
+  set(varName: string, key: string, value: unknown) {
     this.insertWhiteSpace();
 
-    this.query += `SET ${varName}.${key} = $${param ? param : key}`;
+    const dataKey = this.addToData(key, value);
+    this.query += `SET ${varName}.${key} = $${dataKey}`;
 
     this._lastSyntax = "set";
     return this;
@@ -125,6 +128,13 @@ export default class Query {
 
     this._lastSyntax = "delete";
     return this;
+  }
+
+  addToData(key: string, value: unknown) {
+    const uniqueKey = key + this.dataKeyCounter;
+    Object.assign(this.data, { [uniqueKey]: value });
+    this.dataKeyCounter++;
+    return uniqueKey;
   }
 
   private insertWhiteSpace() {
