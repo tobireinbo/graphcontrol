@@ -377,6 +377,15 @@ var ErrorMessages;
     ErrorMessages["inputs"] = "Illegal Inputs";
     ErrorMessages["relation"] = "No such Relation";
 })(ErrorMessages || (ErrorMessages = {}));
+var Result = /** @class */ (function () {
+    function Result(data, error) {
+        this.data = data;
+        this.error = error;
+    }
+    return Result;
+}());
+
+var serverError = new Result(undefined, ErrorMessages.server);
 var Schema = /** @class */ (function () {
     function Schema(neo4jProvider, label, relations, queryLogs) {
         this._label = label;
@@ -405,7 +414,7 @@ var Schema = /** @class */ (function () {
                     case 0:
                         //check inputs
                         if ((args === null || args === void 0 ? void 0 : args.where) && !Schema.checkInputs(args.where)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().match("node", this._label);
                         if (args === null || args === void 0 ? void 0 : args.where) {
@@ -437,13 +446,10 @@ var Schema = /** @class */ (function () {
                         return [4 /*yield*/, this._neo4jProvider.query(_query.get(returnString), _query.data)];
                     case 2:
                         exeQuery = _b.sent();
-                        return [2 /*return*/, {
-                                data: Neo4jProvider.formatRecords(exeQuery),
-                                error: undefined,
-                            }];
+                        return [2 /*return*/, new Result(Neo4jProvider.formatRecords(exeQuery), undefined)];
                     case 3:
                         _b.sent();
-                        return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
+                        return [2 /*return*/, serverError];
                     case 4: return [2 /*return*/];
                 }
             });
@@ -463,7 +469,7 @@ var Schema = /** @class */ (function () {
                         data = args.data;
                         //check inputs
                         if (data && !Schema.checkInputs(data)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().create("node", this._label, data);
                         this.Logger(_query.get("node"), __assign({}, data));
@@ -474,10 +480,10 @@ var Schema = /** @class */ (function () {
                     case 2:
                         exeQuery = _b.sent();
                         result = Neo4jProvider.formatRecords(exeQuery);
-                        return [2 /*return*/, { data: result, error: undefined }];
+                        return [2 /*return*/, new Result(result, undefined)];
                     case 3:
                         _b.sent();
-                        return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
+                        return [2 /*return*/, serverError];
                     case 4: return [2 /*return*/];
                 }
             });
@@ -497,10 +503,10 @@ var Schema = /** @class */ (function () {
                         where = args.where, data = args.data;
                         //check inputs
                         if (where && !Schema.checkInputs(where)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         if (data && !Schema.checkInputs(data)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().match("node", this._label);
                         Util.objectToArray(where, function (key) {
@@ -517,11 +523,10 @@ var Schema = /** @class */ (function () {
                     case 2:
                         exeQuery = _b.sent();
                         result = Neo4jProvider.formatRecords(exeQuery);
-                        //const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
-                        return [2 /*return*/, { data: result, error: undefined }];
+                        return [2 /*return*/, new Result(result, undefined)];
                     case 3:
                         _b.sent();
-                        return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
+                        return [2 /*return*/, serverError];
                     case 4: return [2 /*return*/];
                 }
             });
@@ -541,7 +546,7 @@ var Schema = /** @class */ (function () {
                         where = args.where;
                         //check inputs
                         if (where && !Schema.checkInputs(where)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().match("node", this._label);
                         Util.objectToArray(where, function (key) {
@@ -556,10 +561,10 @@ var Schema = /** @class */ (function () {
                     case 2:
                         exeQuery = _b.sent();
                         confirm_1 = Neo4jProvider.confirmUpdate(exeQuery, "node");
-                        return [2 /*return*/, { data: confirm_1, error: undefined }];
+                        return [2 /*return*/, new Result(confirm_1, undefined)];
                     case 3:
                         _b.sent();
-                        return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
+                        return [2 /*return*/, serverError];
                     case 4: return [2 /*return*/];
                 }
             });
@@ -579,11 +584,11 @@ var Schema = /** @class */ (function () {
                         where = args.where, relation = args.relation;
                         //check inputs
                         if (where && !Schema.checkInputs(where)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         if (relation.destination.where &&
                             !Schema.checkInputs(relation.destination.where)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         dstLabel = relation.destination.schema === Schema.Self
                             ? this._label
@@ -605,13 +610,10 @@ var Schema = /** @class */ (function () {
                         return [4 /*yield*/, this._neo4jProvider.query(_query.get("r"), _query.data)];
                     case 2:
                         exeQuery = _b.sent();
-                        return [2 /*return*/, {
-                                data: Neo4jProvider.confirmUpdate(exeQuery, "relation"),
-                                error: undefined,
-                            }];
+                        return [2 /*return*/, new Result(Neo4jProvider.confirmUpdate(exeQuery, "relation"), undefined)];
                     case 3:
                         _b.sent();
-                        return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
+                        return [2 /*return*/, serverError];
                     case 4: return [2 /*return*/];
                 }
             });
@@ -631,10 +633,10 @@ var Schema = /** @class */ (function () {
                         relationId = args.relationId, where = args.where, destinationWhere = args.destinationWhere;
                         //check inputs
                         if (where && !Schema.checkInputs(where)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         if (destinationWhere && !Schema.checkInputs(destinationWhere)) {
-                            return [2 /*return*/, { data: undefined, error: ErrorMessages.inputs }];
+                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _b.label = 1;
                     case 1:
@@ -645,47 +647,32 @@ var Schema = /** @class */ (function () {
                                 where: where,
                                 relation: {
                                     label: relation.label,
-                                    direction: "to",
+                                    direction: relation.direction || "to",
                                     destination: { schema: relation.schema, where: destinationWhere },
                                 },
                             })];
                     case 2: return [2 /*return*/, _b.sent()];
-                    case 3: return [2 /*return*/, { data: undefined, error: ErrorMessages.relation }];
+                    case 3: return [2 /*return*/, new Result(undefined, ErrorMessages.relation)];
                     case 4: return [3 /*break*/, 6];
                     case 5:
                         _b.sent();
-                        return [2 /*return*/, { data: undefined, error: ErrorMessages.server }];
+                        return [2 /*return*/, serverError];
                     case 6: return [2 /*return*/];
                 }
             });
         });
     };
-    Schema.prototype.deleteRelation = function () {
-        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-            return [2 /*return*/];
-        }); });
+    Schema.prototype.deleteRelation = function (args) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/];
+            });
+        });
     };
     Schema.prototype.updateRelation = function () {
         return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
             return [2 /*return*/];
         }); });
-    };
-    /**
-     * constructs a query string and data object for a given where object
-     * @deprecated
-     * @param varName
-     * @param where
-     * @returns
-     */
-    Schema.prototype.whereConstructor = function (query, varName, where) {
-        var data = {};
-        where &&
-            Util.objectToArray(where, function (key) {
-                var _a;
-                query.where(varName, key, varName + key);
-                data = __assign(__assign({}, data), (_a = {}, _a[varName + key] = where[key], _a));
-            });
-        return data;
     };
     /**
      * executes a match query with the given where properties
@@ -747,5 +734,5 @@ var Schema = /** @class */ (function () {
     return Schema;
 }());
 
-export { Neo4jProvider, Schema };
+export { Neo4jProvider, Query, Result, Schema };
 //# sourceMappingURL=index.esm.js.map

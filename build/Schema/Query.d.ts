@@ -1,7 +1,7 @@
 declare type Properties = {
     [key: string]: any;
 };
-declare type Direction = "to" | "from" | ">" | "<";
+export declare type Direction = "to" | "from" | ">" | "<";
 export default class Query {
     private query;
     data: {

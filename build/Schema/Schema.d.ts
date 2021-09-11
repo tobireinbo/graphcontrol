@@ -1,19 +1,12 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
+import { Direction } from "./Query";
+import Result from "./Result";
 declare type Optional<Type> = {
     [Property in keyof Type]+?: Type[Property];
 };
 declare type Copy<Type> = {
     [Property in keyof Type]: Type[Property];
 };
-export declare type Result<T> = {
-    error: undefined | ErrorMessages;
-    data: undefined | T;
-};
-export declare enum ErrorMessages {
-    server = "Server Error",
-    inputs = "Illegal Inputs",
-    relation = "No such Relation"
-}
 export default class Schema<Properties = {
     [key: string]: unknown;
 }> {
@@ -26,6 +19,7 @@ export default class Schema<Properties = {
         schema: string;
         label: string;
         id: string;
+        direction?: Direction;
     }>, queryLogs?: boolean);
     get label(): string;
     /**
@@ -71,7 +65,7 @@ export default class Schema<Properties = {
         where: Optional<Properties>;
         relation: {
             label: string;
-            direction: "to" | "from";
+            direction: Direction;
             destination: {
                 schema: string;
                 where: Optional<Properties>;
@@ -87,17 +81,13 @@ export default class Schema<Properties = {
         relationId: string;
         where: Optional<Properties>;
         destinationWhere: Optional<Properties>;
-    }): Promise<Result<boolean>>;
-    deleteRelation(): Promise<void>;
+    }): Promise<Result<any>>;
+    deleteRelation(args: {
+        relationId: string;
+        where?: Optional<Properties>;
+        destinationWhere?: Optional<Properties>;
+    }): Promise<Result<any>>;
     updateRelation(): Promise<void>;
-    /**
-     * constructs a query string and data object for a given where object
-     * @deprecated
-     * @param varName
-     * @param where
-     * @returns
-     */
-    private whereConstructor;
     /**
      * executes a match query with the given where properties
      * and responds with a server error when no nodes are found
