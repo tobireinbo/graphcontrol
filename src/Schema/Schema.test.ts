@@ -1,7 +1,6 @@
 import { Schema } from "..";
-import { Neo4jProvider } from "..";
 import { provider } from "../util/provider";
-import { ErrorMessages } from "./Schema";
+import Result, { ErrorMessages } from "./Result";
 
 const testSchema = new Schema<{ uid: string; title: string; rating: number }>(
   provider,
@@ -20,10 +19,7 @@ test("create node", async () => {
   const result = await testSchema.createNode({
     data: singleNode,
   });
-  expect(result).toStrictEqual({
-    data: [singleNode],
-    error: undefined,
-  });
+  expect(result).toStrictEqual(new Result([singleNode], undefined));
 });
 
 test("update node", async () => {
@@ -31,23 +27,21 @@ test("update node", async () => {
     where: { uid: "123abc" },
     data: { rating: 5 },
   });
-  expect(result).toStrictEqual({
-    data: [{ ...singleNode, rating: 5 }],
-    error: undefined,
-  });
+  expect(result).toStrictEqual(
+    new Result([{ ...singleNode, rating: 5 }], undefined)
+  );
 });
 
 test("get single node", async () => {
   const result = await testSchema.getNodes({ where: { uid: "123abc" } });
-  expect(result).toStrictEqual({
-    data: [{ ...singleNode, rating: 5 }],
-    error: undefined,
-  });
+  expect(result).toStrictEqual(
+    new Result([{ ...singleNode, rating: 5 }], undefined)
+  );
 });
 
 test("delete node", async () => {
   const result = await testSchema.deleteNode({ where: { uid: "123abc" } });
-  expect(result).toStrictEqual({ data: true, error: undefined });
+  expect(result).toStrictEqual(new Result(true, undefined));
 });
 
 test("(setup) create multiple nodes", async () => {
@@ -61,30 +55,29 @@ test("(setup) create multiple nodes", async () => {
 
 test("get multiple nodes", async () => {
   const result = await testSchema.getNodes();
-  expect(result).toStrictEqual({
-    data: [
-      { title: "first", uid: "f", rating: 3 },
-      { title: "second", uid: "s", rating: 3 },
-    ],
-    error: undefined,
-  });
+  expect(result).toStrictEqual(
+    new Result(
+      [
+        { title: "first", uid: "f", rating: 3 },
+        { title: "second", uid: "s", rating: 3 },
+      ],
+      undefined
+    )
+  );
 });
 
 test("delete multiple nodes", async () => {
   const result = await testSchema.deleteNode({ where: { rating: 3 } });
-  expect(result).toStrictEqual({ data: true, error: undefined });
+  expect(result).toStrictEqual(new Result(true, undefined));
   const checkDeletion = await testSchema.getNodes({ where: { rating: 3 } });
-  expect(checkDeletion).toStrictEqual({ data: [], error: undefined });
+  expect(checkDeletion).toStrictEqual(new Result([], undefined));
 });
 
 test("illegal inputs", async () => {
   const result = await testSchema.createNode({
     data: { title: "}-[:HAS_NODE]->(z) RETURN z", uid: "12345", rating: 0 },
   });
-  expect(result).toStrictEqual({
-    data: undefined,
-    error: ErrorMessages.inputs,
-  });
+  expect(result).toStrictEqual(new Result(undefined, ErrorMessages.inputs));
 });
 
 afterAll(async () => {

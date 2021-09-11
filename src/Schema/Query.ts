@@ -1,7 +1,7 @@
 import Util from "../util/Util";
 
 type Properties = { [key: string]: any };
-type Direction = "to" | "from" | ">" | "<";
+export type Direction = "to" | "from" | ">" | "<";
 
 export default class Query {
   private query: string;

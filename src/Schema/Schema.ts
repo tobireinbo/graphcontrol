@@ -1,6 +1,7 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
 import Util from "../util/Util";
-import Query from "./Query";
+import Query, { Direction } from "./Query";
+import Result, { ErrorMessages } from "./Result";
 
 //turns every prop of given Type in an optional one
 type Optional<Type> = {
@@ -10,26 +11,22 @@ type Copy<Type> = {
   [Property in keyof Type]: Type[Property];
 };
 
-export type Result<T> = {
-  error: undefined | ErrorMessages;
-  data: undefined | T;
-};
-
-export enum ErrorMessages {
-  server = "Server Error",
-  inputs = "Illegal Inputs",
-  relation = "No such Relation",
-}
-
 type _Properties = {
   [key: string]: unknown;
 };
+
+const serverError = new Result(undefined, ErrorMessages.server);
 
 export default class Schema<Properties = { [key: string]: unknown }> {
   static Self = "__self__";
 
   private _label: string;
-  private _relations?: Array<{ schema: string; label: string; id: string }>;
+  private _relations?: Array<{
+    schema: string;
+    label: string;
+    id: string;
+    direction?: Direction;
+  }>;
   private _neo4jProvider: Neo4jProvider;
 
   private __queryLogs: boolean;
@@ -37,7 +34,12 @@ export default class Schema<Properties = { [key: string]: unknown }> {
   constructor(
     neo4jProvider: Neo4jProvider,
     label: string,
-    relations?: Array<{ schema: string; label: string; id: string }>,
+    relations?: Array<{
+      schema: string;
+      label: string;
+      id: string;
+      direction?: Direction;
+    }>,
     queryLogs?: boolean
   ) {
     this._label = label;
@@ -61,7 +63,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
   }): Promise<Result<Array<Properties>>> {
     //check inputs
     if (args?.where && !Schema.checkInputs(args.where)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
 
     const _query = new Query().match("node", this._label);
@@ -99,12 +101,9 @@ export default class Schema<Properties = { [key: string]: unknown }> {
         _query.data
       );
 
-      return {
-        data: Neo4jProvider.formatRecords(exeQuery),
-        error: undefined,
-      };
+      return new Result(Neo4jProvider.formatRecords(exeQuery), undefined);
     } catch {
-      return { data: undefined, error: ErrorMessages.server };
+      return serverError;
     }
   }
 
@@ -120,7 +119,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     //check inputs
     if (data && !Schema.checkInputs(data)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
 
     const _query = new Query().create("node", this._label, data);
@@ -133,9 +132,9 @@ export default class Schema<Properties = { [key: string]: unknown }> {
         _query.data
       );
       const result = Neo4jProvider.formatRecords(exeQuery);
-      return { data: result, error: undefined };
+      return new Result(result, undefined);
     } catch {
-      return { data: undefined, error: ErrorMessages.server };
+      return serverError;
     }
   }
 
@@ -152,10 +151,10 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     //check inputs
     if (where && !Schema.checkInputs(where)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
     if (data && !Schema.checkInputs(data)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
 
     const _query = new Query().match("node", this._label);
@@ -174,10 +173,9 @@ export default class Schema<Properties = { [key: string]: unknown }> {
         _query.data
       );
       const result = Neo4jProvider.formatRecords(exeQuery);
-      //const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
-      return { data: result, error: undefined };
+      return new Result(result, undefined);
     } catch {
-      return { data: undefined, error: ErrorMessages.server };
+      return serverError;
     }
   }
 
@@ -193,7 +191,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     //check inputs
     if (where && !Schema.checkInputs(where)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
 
     const _query = new Query().match("node", this._label);
@@ -212,9 +210,9 @@ export default class Schema<Properties = { [key: string]: unknown }> {
       );
 
       const confirm = Neo4jProvider.confirmUpdate(exeQuery, "node");
-      return { data: confirm, error: undefined };
+      return new Result(confirm, undefined);
     } catch {
-      return { data: undefined, error: ErrorMessages.server };
+      return serverError;
     }
   }
 
@@ -227,7 +225,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     where: Optional<Properties>;
     relation: {
       label: string;
-      direction: "to" | "from";
+      direction: Direction;
       destination: { schema: string; where: Optional<Properties> };
     };
   }): Promise<Result<boolean>> {
@@ -235,13 +233,13 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     //check inputs
     if (where && !Schema.checkInputs(where)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
     if (
       relation.destination.where &&
       !Schema.checkInputs(relation.destination.where)
     ) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
 
     const dstLabel =
@@ -270,12 +268,12 @@ export default class Schema<Properties = { [key: string]: unknown }> {
         _query.get("r"),
         _query.data
       );
-      return {
-        data: Neo4jProvider.confirmUpdate(exeQuery, "relation"),
-        error: undefined,
-      };
+      return new Result(
+        Neo4jProvider.confirmUpdate(exeQuery, "relation"),
+        undefined
+      );
     } catch {
-      return { data: undefined, error: ErrorMessages.server };
+      return serverError;
     }
   }
 
@@ -293,10 +291,10 @@ export default class Schema<Properties = { [key: string]: unknown }> {
 
     //check inputs
     if (where && !Schema.checkInputs(where)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
     if (destinationWhere && !Schema.checkInputs(destinationWhere)) {
-      return { data: undefined, error: ErrorMessages.inputs };
+      return new Result(undefined, ErrorMessages.inputs);
     }
     try {
       const relation = this._relations.find((r) => r.id === relationId);
@@ -306,46 +304,32 @@ export default class Schema<Properties = { [key: string]: unknown }> {
           where,
           relation: {
             label: relation.label,
-            direction: "to",
+            direction: relation.direction || "to",
             destination: { schema: relation.schema, where: destinationWhere },
           },
         });
       } else {
-        return { data: undefined, error: ErrorMessages.relation };
+        return new Result(undefined, ErrorMessages.relation);
       }
     } catch {
-      return { data: undefined, error: ErrorMessages.server };
+      return serverError;
     }
   }
 
-  async deleteRelation() {}
+  async deleteRelation(args: {
+    relationId: string;
+    where?: Optional<Properties>;
+    destinationWhere?: Optional<Properties>;
+  }) {
+    const { relationId, where, destinationWhere } = args;
+
+    try {
+    } catch {
+      return serverError;
+    }
+  }
 
   async updateRelation() {}
-
-  /**
-   * constructs a query string and data object for a given where object
-   * @deprecated
-   * @param varName
-   * @param where
-   * @returns
-   */
-  private whereConstructor(
-    query: Query,
-    varName: string,
-    where: Optional<Properties>
-  ): { [key: string]: unknown } {
-    let data = {};
-    where &&
-      Util.objectToArray(where, (key) => {
-        query.where(varName, key, varName + key);
-        data = {
-          ...data,
-          //@ts-ignore
-          [varName + key]: where[key],
-        };
-      });
-    return data;
-  }
 
   /**
    * executes a match query with the given where properties
