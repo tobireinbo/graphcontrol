@@ -384,8 +384,8 @@ var Result = /** @class */ (function () {
     }
     return Result;
 }());
-
 var serverError = new Result(undefined, ErrorMessages.server);
+
 var Schema = /** @class */ (function () {
     function Schema(neo4jProvider, label, relations, queryLogs) {
         this._label = label;
@@ -431,7 +431,7 @@ var Schema = /** @class */ (function () {
                                     .relatation(undefined, rel.label, ">")
                                     .node("dst" + index, dstLabel);
                                 if (index === 0) {
-                                    returnString = "{.*";
+                                    returnString += "{.*";
                                 }
                                 returnString += ", " + dstLabel + ": collect(DISTINCT dst" + index + "{.*})";
                                 if (_this._relations && index === _this._relations.length - 1) {
@@ -640,9 +640,11 @@ var Schema = /** @class */ (function () {
                         }
                         _b.label = 1;
                     case 1:
-                        _b.trys.push([1, 5, , 6]);
+                        _b.trys.push([1, 3, , 4]);
                         relation = this._relations.find(function (r) { return r.id === relationId; });
-                        if (!relation) return [3 /*break*/, 3];
+                        if (!relation) {
+                            throw new Error(ErrorMessages.relation);
+                        }
                         return [4 /*yield*/, this.createStaticRelation({
                                 where: where,
                                 relation: {
@@ -652,27 +654,53 @@ var Schema = /** @class */ (function () {
                                 },
                             })];
                     case 2: return [2 /*return*/, _b.sent()];
-                    case 3: return [2 /*return*/, new Result(undefined, ErrorMessages.relation)];
-                    case 4: return [3 /*break*/, 6];
-                    case 5:
+                    case 3:
                         _b.sent();
                         return [2 /*return*/, serverError];
-                    case 6: return [2 /*return*/];
+                    case 4: return [2 /*return*/];
                 }
             });
         });
     };
+    /**
+     * delete a relation specified in the schema.
+     * @param args
+     * @returns
+     */
     Schema.prototype.deleteRelation = function (args) {
         return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                return [2 /*return*/];
+            var relationId, where, destinationWhere, currentRelation, dstLabel, _query, exeQuery;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        relationId = args.relationId, where = args.where, destinationWhere = args.destinationWhere;
+                        currentRelation = this._relations.find(function (r) { return r.id === relationId; });
+                        if (!currentRelation) {
+                            throw new Error(ErrorMessages.relation);
+                        }
+                        dstLabel = currentRelation.schema === Schema.Self
+                            ? this._label
+                            : currentRelation.schema;
+                        _query = new Query()
+                            .match("src", this._label, where)
+                            .relatation("r", currentRelation.label, currentRelation.direction || "to")
+                            .node("dst", dstLabel, destinationWhere);
+                        _query.delete(["r"]);
+                        this.Logger(_query.get(), _query.data);
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, this._neo4jProvider.query(_query.get(), _query.data)];
+                    case 2:
+                        exeQuery = _b.sent();
+                        return [2 /*return*/, new Result(Neo4jProvider.confirmUpdate(exeQuery, "relation"), undefined)];
+                    case 3:
+                        _b.sent();
+                        return [2 /*return*/, serverError];
+                    case 4: return [2 /*return*/];
+                }
             });
         });
-    };
-    Schema.prototype.updateRelation = function () {
-        return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-            return [2 /*return*/];
-        }); });
     };
     /**
      * executes a match query with the given where properties

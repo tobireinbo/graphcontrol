@@ -8,3 +8,4 @@ export default class Result<T> {
     error: undefined | ErrorMessages;
     constructor(data: T | undefined, error: undefined | ErrorMessages);
 }
+export declare const serverError: Result<any>;

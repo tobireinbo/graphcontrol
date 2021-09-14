@@ -1,4 +1,4 @@
-import { Schema } from "..";
+import { Query, Schema } from "..";
 import { provider } from "../util/provider";
 import Result, { ErrorMessages } from "./Result";
 
@@ -53,17 +53,40 @@ test("(setup) create multiple nodes", async () => {
   });
 });
 
-test("get multiple nodes", async () => {
-  const result = await testSchema.getNodes();
+test("create relation", async () => {
+  const result = await testSchema.createRelation({
+    relationId: "self rel",
+    where: { uid: "f" },
+    destinationWhere: { uid: "s" },
+  });
+  expect(result).toStrictEqual(new Result(true, undefined));
+});
+
+test("get multiple nodes with relations", async () => {
+  const result = await testSchema.getNodes({ includeRelatedNodes: true });
   expect(result).toStrictEqual(
     new Result(
       [
-        { title: "first", uid: "f", rating: 3 },
-        { title: "second", uid: "s", rating: 3 },
+        {
+          title: "first",
+          uid: "f",
+          rating: 3,
+          Test: [{ title: "second", uid: "s", rating: 3 }],
+        },
+        { title: "second", uid: "s", rating: 3, Test: [] },
       ],
       undefined
     )
   );
+});
+
+test("delete relation", async () => {
+  const result = await testSchema.deleteRelation({
+    relationId: "self rel",
+    where: { uid: "f" },
+    destinationWhere: { uid: "s" },
+  });
+  expect(result).toStrictEqual(new Result(true, undefined));
 });
 
 test("delete multiple nodes", async () => {

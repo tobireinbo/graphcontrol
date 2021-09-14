@@ -1,15 +1,13 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
 import { Direction } from "./Query";
 import Result from "./Result";
-declare type Optional<Type> = {
+export declare type Optional<Type> = {
     [Property in keyof Type]+?: Type[Property];
 };
-declare type Copy<Type> = {
-    [Property in keyof Type]: Type[Property];
-};
-export default class Schema<Properties = {
+declare type _Properties = {
     [key: string]: unknown;
-}> {
+};
+export default class Schema<Properties> {
     static Self: string;
     private _label;
     private _relations?;
@@ -37,7 +35,7 @@ export default class Schema<Properties = {
      * @returns
      */
     createNode(args: {
-        data: Copy<Properties>;
+        data: Properties;
     }): Promise<Result<Array<Properties>>>;
     /**
      *
@@ -55,6 +53,7 @@ export default class Schema<Properties = {
      */
     deleteNode(args: {
         where: Optional<Properties>;
+        includeRelatedNodes?: boolean;
     }): Promise<Result<boolean>>;
     /**
      *
@@ -68,7 +67,7 @@ export default class Schema<Properties = {
             direction: Direction;
             destination: {
                 schema: string;
-                where: Optional<Properties>;
+                where: Optional<_Properties>;
             };
         };
     }): Promise<Result<boolean>>;
@@ -80,14 +79,18 @@ export default class Schema<Properties = {
     createRelation(args: {
         relationId: string;
         where: Optional<Properties>;
-        destinationWhere: Optional<Properties>;
+        destinationWhere: Optional<_Properties>;
     }): Promise<Result<any>>;
+    /**
+     * delete a relation specified in the schema.
+     * @param args
+     * @returns
+     */
     deleteRelation(args: {
         relationId: string;
         where?: Optional<Properties>;
         destinationWhere?: Optional<Properties>;
     }): Promise<Result<any>>;
-    updateRelation(): Promise<void>;
     /**
      * executes a match query with the given where properties
      * and responds with a server error when no nodes are found

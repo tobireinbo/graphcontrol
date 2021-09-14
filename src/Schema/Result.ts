@@ -12,3 +12,5 @@ export default class Result<T> {
     this.error = error;
   }
 }
+
+export const serverError = new Result(undefined, ErrorMessages.server);

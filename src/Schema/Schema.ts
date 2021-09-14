@@ -1,23 +1,18 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
 import Util from "../util/Util";
 import Query, { Direction } from "./Query";
-import Result, { ErrorMessages } from "./Result";
+import Result, { ErrorMessages, serverError } from "./Result";
 
 //turns every prop of given Type in an optional one
-type Optional<Type> = {
+export type Optional<Type> = {
   [Property in keyof Type]+?: Type[Property];
-};
-type Copy<Type> = {
-  [Property in keyof Type]: Type[Property];
 };
 
 type _Properties = {
   [key: string]: unknown;
 };
 
-const serverError = new Result(undefined, ErrorMessages.server);
-
-export default class Schema<Properties = { [key: string]: unknown }> {
+export default class Schema<Properties> {
   static Self = "__self__";
 
   private _label: string;
@@ -84,7 +79,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
           .node(`dst${index}`, dstLabel);
 
         if (index === 0) {
-          returnString = "{.*";
+          returnString += "{.*";
         }
         returnString += `, ${dstLabel}: collect(DISTINCT dst${index}{.*})`;
         if (this._relations && index === this._relations.length - 1) {
@@ -100,7 +95,6 @@ export default class Schema<Properties = { [key: string]: unknown }> {
         _query.get(returnString),
         _query.data
       );
-
       return new Result(Neo4jProvider.formatRecords(exeQuery), undefined);
     } catch {
       return serverError;
@@ -113,7 +107,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
    * @returns
    */
   async createNode(args: {
-    data: Copy<Properties>;
+    data: Properties;
   }): Promise<Result<Array<Properties>>> {
     const { data } = args;
 
@@ -186,6 +180,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
    */
   async deleteNode(args: {
     where: Optional<Properties>;
+    includeRelatedNodes?: boolean; //TO-DO
   }): Promise<Result<boolean>> {
     const { where } = args;
 
@@ -226,7 +221,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     relation: {
       label: string;
       direction: Direction;
-      destination: { schema: string; where: Optional<Properties> };
+      destination: { schema: string; where: Optional<_Properties> };
     };
   }): Promise<Result<boolean>> {
     const { where, relation } = args;
@@ -285,7 +280,7 @@ export default class Schema<Properties = { [key: string]: unknown }> {
   async createRelation(args: {
     relationId: string;
     where: Optional<Properties>;
-    destinationWhere: Optional<Properties>;
+    destinationWhere: Optional<_Properties>;
   }) {
     const { relationId, where, destinationWhere } = args;
 
@@ -299,37 +294,65 @@ export default class Schema<Properties = { [key: string]: unknown }> {
     try {
       const relation = this._relations.find((r) => r.id === relationId);
 
-      if (relation) {
-        return await this.createStaticRelation({
-          where,
-          relation: {
-            label: relation.label,
-            direction: relation.direction || "to",
-            destination: { schema: relation.schema, where: destinationWhere },
-          },
-        });
-      } else {
-        return new Result(undefined, ErrorMessages.relation);
+      if (!relation) {
+        throw new Error(ErrorMessages.relation);
       }
+      return await this.createStaticRelation({
+        where,
+        relation: {
+          label: relation.label,
+          direction: relation.direction || "to",
+          destination: { schema: relation.schema, where: destinationWhere },
+        },
+      });
     } catch {
       return serverError;
     }
   }
 
+  /**
+   * delete a relation specified in the schema.
+   * @param args
+   * @returns
+   */
   async deleteRelation(args: {
     relationId: string;
     where?: Optional<Properties>;
     destinationWhere?: Optional<Properties>;
   }) {
     const { relationId, where, destinationWhere } = args;
+    const currentRelation = this._relations.find((r) => r.id === relationId);
+    if (!currentRelation) {
+      throw new Error(ErrorMessages.relation);
+    }
+
+    const dstLabel =
+      currentRelation.schema === Schema.Self
+        ? this._label
+        : currentRelation.schema;
+
+    const _query = new Query()
+      .match("src", this._label, where)
+      .relatation("r", currentRelation.label, currentRelation.direction || "to")
+      .node("dst", dstLabel, destinationWhere);
+
+    _query.delete(["r"]);
+
+    this.Logger(_query.get(), _query.data);
 
     try {
+      const exeQuery = await this._neo4jProvider.query(
+        _query.get(),
+        _query.data
+      );
+      return new Result(
+        Neo4jProvider.confirmUpdate(exeQuery, "relation"),
+        undefined
+      );
     } catch {
       return serverError;
     }
   }
-
-  async updateRelation() {}
 
   /**
    * executes a match query with the given where properties
