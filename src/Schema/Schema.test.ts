@@ -114,6 +114,35 @@ test("unchecked", async () => {
   );
 });
 
+test("get nodes with required Relations", async () => {
+  const user = new Schema<{ name: string }>(
+    provider,
+    "AuthUser",
+    undefined,
+    true
+  );
+  const project = new Schema<{ name: string }>(
+    provider,
+    "Project",
+    [{ id: "user", schema: "AuthUser", direction: "from", label: "ACCESS" }],
+    true
+  );
+  await user.createNode({ data: { name: "me" } });
+  await project.createNode({ data: { name: "website" } });
+  await project.createNode({ data: { name: "lone" } });
+  await project.createRelation({
+    relationId: "user",
+    where: { name: "website" },
+    destinationWhere: { name: "me" },
+  });
+  const res = await project.getNodesWithRelation({
+    relationId: "user",
+    destinationWhere: { name: "me" },
+  });
+
+  expect(res).toStrictEqual(new Result([{ name: "website" }], undefined));
+});
+
 afterAll(async () => {
   await provider.closeDriver();
 });

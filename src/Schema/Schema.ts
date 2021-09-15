@@ -1,7 +1,7 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
 import Util from "../util/Util";
 import Query, { Direction } from "./Query";
-import Result, { ErrorMessages, serverError } from "./Result";
+import Result, { ErrorMessages, inputsError, serverError } from "./Result";
 
 //turns every prop of given Type in an optional one
 export type Optional<Type> = {
@@ -12,16 +12,17 @@ type _Properties = {
   [key: string]: unknown;
 };
 
+type Relation = {
+  schema: string;
+  label: string;
+  id: string;
+  direction?: Direction;
+};
 export default class Schema<Properties> {
   static Self = "__self__";
 
   private _label: string;
-  private _relations?: Array<{
-    schema: string;
-    label: string;
-    id: string;
-    direction?: Direction;
-  }>;
+  private _relations?: Array<Relation>;
   private _neo4jProvider: Neo4jProvider;
 
   private __queryLogs: boolean;
@@ -60,7 +61,7 @@ export default class Schema<Properties> {
   }): Promise<Result<Array<Properties>>> {
     //check inputs
     if (args?.where && !this.checkInputs(args.where)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
 
     const _query = new Query().match("node", this._label);
@@ -73,7 +74,7 @@ export default class Schema<Properties> {
     let returnString = "node";
     if (args?.includeRelatedNodes) {
       this._relations.forEach((rel, index) => {
-        const dstLabel = rel.schema === Schema.Self ? this._label : rel.schema;
+        const dstLabel = this.resolveSchema(rel.schema);
 
         _query
           .optionalMatch("node")
@@ -115,7 +116,7 @@ export default class Schema<Properties> {
 
     //check inputs
     if (data && !this.checkInputs(data)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
 
     const _query = new Query().create("node", this._label, data);
@@ -147,10 +148,10 @@ export default class Schema<Properties> {
 
     //check inputs
     if (where && !this.checkInputs(where)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
     if (data && !this.checkInputs(data)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
 
     const _query = new Query().match("node", this._label);
@@ -188,7 +189,7 @@ export default class Schema<Properties> {
 
     //check inputs
     if (where && !this.checkInputs(where)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
 
     const _query = new Query().match("node", this._label);
@@ -230,19 +231,16 @@ export default class Schema<Properties> {
 
     //check inputs
     if (where && !this.checkInputs(where)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
     if (
       relation.destination.where &&
       !this.checkInputs(relation.destination.where)
     ) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
 
-    const dstLabel =
-      relation.destination.schema === Schema.Self
-        ? this._label
-        : relation.destination.schema;
+    const dstLabel = this.resolveSchema(relation.destination.schema);
 
     const _query = new Query();
 
@@ -283,15 +281,15 @@ export default class Schema<Properties> {
     relationId: string;
     where: Optional<Properties>;
     destinationWhere: Optional<_Properties>;
-  }) {
+  }): Promise<Result<boolean>> {
     const { relationId, where, destinationWhere } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
     if (destinationWhere && !this.checkInputs(destinationWhere)) {
-      return new Result(undefined, ErrorMessages.inputs);
+      return inputsError;
     }
     try {
       const relation = this._relations.find((r) => r.id === relationId);
@@ -312,6 +310,39 @@ export default class Schema<Properties> {
     }
   }
 
+  async getNodesWithRelation(args: {
+    relationId: string;
+    where?: Optional<Properties>;
+    destinationWhere?: Optional<_Properties>;
+  }) {
+    const { relationId, where, destinationWhere } = args;
+
+    if (where && !this.checkInputs(where)) {
+      return inputsError;
+    }
+    if (destinationWhere && !this.checkInputs(destinationWhere)) {
+      return inputsError;
+    }
+    const currentRelation = this._relations.find((r) => r.id === relationId);
+    const dstLabel = this.resolveSchema(currentRelation.schema);
+    const _query = new Query()
+      .match("node", this._label, where)
+      .relatation("r", currentRelation.label, currentRelation.direction)
+      .node("dst", dstLabel, destinationWhere);
+
+    this.Logger(_query.get("node"), _query.data);
+
+    try {
+      const exeQuery = await this._neo4jProvider.query(
+        _query.get("node"),
+        _query.data
+      );
+      return new Result(Neo4jProvider.formatRecords(exeQuery), undefined);
+    } catch {
+      return serverError;
+    }
+  }
+
   /**
    * delete a relation specified in the schema.
    * @param args
@@ -320,7 +351,7 @@ export default class Schema<Properties> {
   async deleteRelation(args: {
     relationId: string;
     where?: Optional<Properties>;
-    destinationWhere?: Optional<Properties>;
+    destinationWhere?: Optional<_Properties>;
   }) {
     const { relationId, where, destinationWhere } = args;
     const currentRelation = this._relations.find((r) => r.id === relationId);
@@ -328,10 +359,7 @@ export default class Schema<Properties> {
       throw new Error(ErrorMessages.relation);
     }
 
-    const dstLabel =
-      currentRelation.schema === Schema.Self
-        ? this._label
-        : currentRelation.schema;
+    const dstLabel = this.resolveSchema(currentRelation.schema);
 
     const _query = new Query()
       .match("src", this._label, where)
@@ -388,6 +416,10 @@ export default class Schema<Properties> {
   noCheck() {
     this.__checkInputs = false;
     return this;
+  }
+
+  private resolveSchema(schema: string) {
+    return schema === Schema.Self ? this._label : schema;
   }
 
   /**

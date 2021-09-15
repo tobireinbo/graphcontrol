@@ -14,3 +14,4 @@ export default class Result<T> {
 }
 
 export const serverError = new Result(undefined, ErrorMessages.server);
+export const inputsError = new Result(undefined, ErrorMessages.inputs);

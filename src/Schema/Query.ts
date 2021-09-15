@@ -96,13 +96,22 @@ export default class Query {
     return this;
   }
 
-  where(varName: string, key: string, value: unknown, not?: boolean) {
+  where(varName?: string, key?: string, value?: unknown, not?: boolean) {
     this.insertWhiteSpace();
 
     const dataKey = this.addToData(key, value);
     this.query += `WHERE${not ? " NOT" : ""} ${varName}.${key} = $${dataKey}`;
 
     this._lastSyntax = "where";
+    return this;
+  }
+
+  whereNode(varName?: string) {
+    this.insertWhiteSpace();
+
+    this.query += `WHERE (${varName})`;
+
+    this._lastSyntax = "node";
     return this;
   }
 
