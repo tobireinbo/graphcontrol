@@ -427,7 +427,8 @@ export default class Schema<Properties> {
    * @param data
    */
   private checkInputs(data: Optional<_Properties> | _Properties) {
-    const regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
+    //const regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
+    const regex = new RegExp(/["'`]/g);
     let legal = true;
 
     if (this.__checkInputs)

@@ -344,6 +344,12 @@ var Query = /** @class */ (function () {
         this._lastSyntax = "where";
         return this;
     };
+    Query.prototype.whereNode = function (varName) {
+        this.insertWhiteSpace();
+        this.query += "WHERE (" + varName + ")";
+        this._lastSyntax = "node";
+        return this;
+    };
     Query.prototype.set = function (varName, key, value) {
         this.insertWhiteSpace();
         var dataKey = this.addToData(key, value);
@@ -393,6 +399,7 @@ var Result = /** @class */ (function () {
     return Result;
 }());
 var serverError = new Result(undefined, ErrorMessages.server);
+var inputsError = new Result(undefined, ErrorMessages.inputs);
 
 var Schema = /** @class */ (function () {
     function Schema(neo4jProvider, label, relations, queryLogs) {
@@ -423,7 +430,7 @@ var Schema = /** @class */ (function () {
                     case 0:
                         //check inputs
                         if ((args === null || args === void 0 ? void 0 : args.where) && !this.checkInputs(args.where)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         _query = new Query().match("node", this._label);
                         if (args === null || args === void 0 ? void 0 : args.where) {
@@ -434,7 +441,7 @@ var Schema = /** @class */ (function () {
                         returnString = "node";
                         if (args === null || args === void 0 ? void 0 : args.includeRelatedNodes) {
                             this._relations.forEach(function (rel, index) {
-                                var dstLabel = rel.schema === Schema.Self ? _this._label : rel.schema;
+                                var dstLabel = _this.resolveSchema(rel.schema);
                                 _query
                                     .optionalMatch("node")
                                     .relatation(undefined, rel.label, ">")
@@ -478,7 +485,7 @@ var Schema = /** @class */ (function () {
                         data = args.data;
                         //check inputs
                         if (data && !this.checkInputs(data)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         _query = new Query().create("node", this._label, data);
                         this.Logger(_query.get("node"), __assign({}, data));
@@ -512,10 +519,10 @@ var Schema = /** @class */ (function () {
                         where = args.where, data = args.data;
                         //check inputs
                         if (where && !this.checkInputs(where)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         if (data && !this.checkInputs(data)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         _query = new Query().match("node", this._label);
                         Util.objectToArray(where, function (key) {
@@ -555,7 +562,7 @@ var Schema = /** @class */ (function () {
                         where = args.where;
                         //check inputs
                         if (where && !this.checkInputs(where)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         _query = new Query().match("node", this._label);
                         Util.objectToArray(where, function (key) {
@@ -593,15 +600,13 @@ var Schema = /** @class */ (function () {
                         where = args.where, relation = args.relation;
                         //check inputs
                         if (where && !this.checkInputs(where)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         if (relation.destination.where &&
                             !this.checkInputs(relation.destination.where)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
-                        dstLabel = relation.destination.schema === Schema.Self
-                            ? this._label
-                            : relation.destination.schema;
+                        dstLabel = this.resolveSchema(relation.destination.schema);
                         _query = new Query();
                         _query.match("n1", this._label);
                         Util.objectToArray(where, function (key) {
@@ -642,10 +647,10 @@ var Schema = /** @class */ (function () {
                         relationId = args.relationId, where = args.where, destinationWhere = args.destinationWhere;
                         //check inputs
                         if (where && !this.checkInputs(where)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         if (destinationWhere && !this.checkInputs(destinationWhere)) {
-                            return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
+                            return [2 /*return*/, inputsError];
                         }
                         _b.label = 1;
                     case 1:
@@ -671,6 +676,41 @@ var Schema = /** @class */ (function () {
             });
         });
     };
+    Schema.prototype.getNodesWithRelation = function (args) {
+        return __awaiter(this, void 0, void 0, function () {
+            var relationId, where, destinationWhere, currentRelation, dstLabel, _query, exeQuery;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        relationId = args.relationId, where = args.where, destinationWhere = args.destinationWhere;
+                        if (where && !this.checkInputs(where)) {
+                            return [2 /*return*/, inputsError];
+                        }
+                        if (destinationWhere && !this.checkInputs(destinationWhere)) {
+                            return [2 /*return*/, inputsError];
+                        }
+                        currentRelation = this._relations.find(function (r) { return r.id === relationId; });
+                        dstLabel = this.resolveSchema(currentRelation.schema);
+                        _query = new Query()
+                            .match("node", this._label, where)
+                            .relatation("r", currentRelation.label, currentRelation.direction)
+                            .node("dst", dstLabel, destinationWhere);
+                        this.Logger(_query.get("node"), _query.data);
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, this._neo4jProvider.query(_query.get("node"), _query.data)];
+                    case 2:
+                        exeQuery = _b.sent();
+                        return [2 /*return*/, new Result(Neo4jProvider.formatRecords(exeQuery), undefined)];
+                    case 3:
+                        _b.sent();
+                        return [2 /*return*/, serverError];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
     /**
      * delete a relation specified in the schema.
      * @param args
@@ -687,9 +727,7 @@ var Schema = /** @class */ (function () {
                         if (!currentRelation) {
                             throw new Error(ErrorMessages.relation);
                         }
-                        dstLabel = currentRelation.schema === Schema.Self
-                            ? this._label
-                            : currentRelation.schema;
+                        dstLabel = this.resolveSchema(currentRelation.schema);
                         _query = new Query()
                             .match("src", this._label, where)
                             .relatation("r", currentRelation.label, currentRelation.direction || "to")
@@ -752,12 +790,16 @@ var Schema = /** @class */ (function () {
         this.__checkInputs = false;
         return this;
     };
+    Schema.prototype.resolveSchema = function (schema) {
+        return schema === Schema.Self ? this._label : schema;
+    };
     /**
      * checks input data in order to prevent cypher injections
      * @param data
      */
     Schema.prototype.checkInputs = function (data) {
-        var regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
+        //const regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
+        var regex = new RegExp(/["'`]/g);
         var legal = true;
         if (this.__checkInputs)
             Object.keys(data).forEach(function (key) {

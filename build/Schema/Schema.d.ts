@@ -81,6 +81,11 @@ export default class Schema<Properties> {
         relationId: string;
         where: Optional<Properties>;
         destinationWhere: Optional<_Properties>;
+    }): Promise<Result<boolean>>;
+    getNodesWithRelation(args: {
+        relationId: string;
+        where?: Optional<Properties>;
+        destinationWhere?: Optional<_Properties>;
     }): Promise<Result<any>>;
     /**
      * delete a relation specified in the schema.
@@ -90,7 +95,7 @@ export default class Schema<Properties> {
     deleteRelation(args: {
         relationId: string;
         where?: Optional<Properties>;
-        destinationWhere?: Optional<Properties>;
+        destinationWhere?: Optional<_Properties>;
     }): Promise<Result<any>>;
     /**
      * executes a match query with the given where properties
@@ -103,6 +108,7 @@ export default class Schema<Properties> {
      * disables input checking for the next action
      */
     noCheck(): this;
+    private resolveSchema;
     /**
      * checks input data in order to prevent cypher injections
      * @param data

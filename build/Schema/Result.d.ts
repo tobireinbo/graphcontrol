@@ -9,3 +9,4 @@ export default class Result<T> {
     constructor(data: T | undefined, error: undefined | ErrorMessages);
 }
 export declare const serverError: Result<any>;
+export declare const inputsError: Result<any>;

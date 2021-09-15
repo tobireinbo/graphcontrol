@@ -98,7 +98,7 @@ test("delete multiple nodes", async () => {
 
 test("illegal inputs", async () => {
   const result = await testSchema.createNode({
-    data: { title: "}-[:HAS_NODE]->(z) RETURN z", uid: "12345", rating: 0 },
+    data: { title: "test'test", uid: "12345", rating: 0 },
   });
   expect(result).toStrictEqual(new Result(undefined, ErrorMessages.inputs));
 });
@@ -106,12 +106,10 @@ test("illegal inputs", async () => {
 test("unchecked", async () => {
   const schema = new Schema<{ hash: string }>(provider, "Test2");
   const result = await schema.noCheck().createNode({
-    data: { hash: "907wv.-7#58902))<{3?" },
+    data: { hash: "''''```" },
   });
 
-  expect(result).toStrictEqual(
-    new Result([{ hash: "907wv.-7#58902))<{3?" }], undefined)
-  );
+  expect(result).toStrictEqual(new Result([{ hash: "''''```" }], undefined));
 });
 
 test("get nodes with required Relations", async () => {
