@@ -1,5 +1,5 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
-import Util, { NoCheck } from "../util/Util";
+import Util from "../util/Util";
 import Query, { Direction } from "./Query";
 import Result, { ErrorMessages, serverError } from "./Result";
 
@@ -25,6 +25,7 @@ export default class Schema<Properties> {
   private _neo4jProvider: Neo4jProvider;
 
   private __queryLogs: boolean;
+  private __checkInputs: boolean;
 
   constructor(
     neo4jProvider: Neo4jProvider,
@@ -41,6 +42,7 @@ export default class Schema<Properties> {
     this._relations = relations;
     this._neo4jProvider = neo4jProvider;
     this.__queryLogs = queryLogs;
+    this.__checkInputs = true;
   }
 
   get label() {
@@ -57,7 +59,7 @@ export default class Schema<Properties> {
     includeRelatedNodes?: boolean;
   }): Promise<Result<Array<Properties>>> {
     //check inputs
-    if (args?.where && !Schema.checkInputs(args.where)) {
+    if (args?.where && !this.checkInputs(args.where)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
 
@@ -112,7 +114,7 @@ export default class Schema<Properties> {
     const { data } = args;
 
     //check inputs
-    if (data && !Schema.checkInputs(data)) {
+    if (data && !this.checkInputs(data)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
 
@@ -144,10 +146,10 @@ export default class Schema<Properties> {
     const { where, data } = args;
 
     //check inputs
-    if (where && !Schema.checkInputs(where)) {
+    if (where && !this.checkInputs(where)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
-    if (data && !Schema.checkInputs(data)) {
+    if (data && !this.checkInputs(data)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
 
@@ -185,7 +187,7 @@ export default class Schema<Properties> {
     const { where } = args;
 
     //check inputs
-    if (where && !Schema.checkInputs(where)) {
+    if (where && !this.checkInputs(where)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
 
@@ -227,12 +229,12 @@ export default class Schema<Properties> {
     const { where, relation } = args;
 
     //check inputs
-    if (where && !Schema.checkInputs(where)) {
+    if (where && !this.checkInputs(where)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
     if (
       relation.destination.where &&
-      !Schema.checkInputs(relation.destination.where)
+      !this.checkInputs(relation.destination.where)
     ) {
       return new Result(undefined, ErrorMessages.inputs);
     }
@@ -285,10 +287,10 @@ export default class Schema<Properties> {
     const { relationId, where, destinationWhere } = args;
 
     //check inputs
-    if (where && !Schema.checkInputs(where)) {
+    if (where && !this.checkInputs(where)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
-    if (destinationWhere && !Schema.checkInputs(destinationWhere)) {
+    if (destinationWhere && !this.checkInputs(destinationWhere)) {
       return new Result(undefined, ErrorMessages.inputs);
     }
     try {
@@ -381,23 +383,31 @@ export default class Schema<Properties> {
   }
 
   /**
+   * disables input checking for the next action
+   */
+  noCheck() {
+    this.__checkInputs = false;
+    return this;
+  }
+
+  /**
    * checks input data in order to prevent cypher injections
    * @param data
    */
-  private static checkInputs(data: Optional<_Properties> | _Properties) {
+  private checkInputs(data: Optional<_Properties> | _Properties) {
     const regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
     let legal = true;
 
-    Object.keys(data).forEach((key: string) => {
-      const currentData = String(data[key]);
-      if (data[key] instanceof NoCheck) {
-        console.log("dont check this one");
-      } else if (regex.test(currentData)) {
-        console.log("illegal prop", currentData);
-        legal = false;
-      }
-    });
+    if (this.__checkInputs)
+      Object.keys(data).forEach((key: string) => {
+        const currentData = String(data[key]);
+        if (regex.test(currentData)) {
+          console.log("illegal prop", currentData);
+          legal = false;
+        }
+      });
 
+    this.__checkInputs = true;
     return legal;
   }
 

@@ -274,12 +274,6 @@ var Util = /** @class */ (function () {
     };
     return Util;
 }());
-var NoCheck = /** @class */ (function () {
-    function NoCheck(value) {
-        this.value = value;
-    }
-    return NoCheck;
-}());
 
 var Query = /** @class */ (function () {
     function Query() {
@@ -372,12 +366,8 @@ var Query = /** @class */ (function () {
     };
     Query.prototype.addToData = function (key, value) {
         var _a;
-        var _value = value;
-        if (value instanceof NoCheck) {
-            _value = value.value;
-        }
         var uniqueKey = key + this.dataKeyCounter;
-        Object.assign(this.data, (_a = {}, _a[uniqueKey] = _value, _a));
+        Object.assign(this.data, (_a = {}, _a[uniqueKey] = value, _a));
         this.dataKeyCounter++;
         return uniqueKey;
     };
@@ -410,6 +400,7 @@ var Schema = /** @class */ (function () {
         this._relations = relations;
         this._neo4jProvider = neo4jProvider;
         this.__queryLogs = queryLogs;
+        this.__checkInputs = true;
     }
     Object.defineProperty(Schema.prototype, "label", {
         get: function () {
@@ -431,7 +422,7 @@ var Schema = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         //check inputs
-                        if ((args === null || args === void 0 ? void 0 : args.where) && !Schema.checkInputs(args.where)) {
+                        if ((args === null || args === void 0 ? void 0 : args.where) && !this.checkInputs(args.where)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().match("node", this._label);
@@ -486,7 +477,7 @@ var Schema = /** @class */ (function () {
                     case 0:
                         data = args.data;
                         //check inputs
-                        if (data && !Schema.checkInputs(data)) {
+                        if (data && !this.checkInputs(data)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().create("node", this._label, data);
@@ -520,10 +511,10 @@ var Schema = /** @class */ (function () {
                     case 0:
                         where = args.where, data = args.data;
                         //check inputs
-                        if (where && !Schema.checkInputs(where)) {
+                        if (where && !this.checkInputs(where)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
-                        if (data && !Schema.checkInputs(data)) {
+                        if (data && !this.checkInputs(data)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().match("node", this._label);
@@ -563,7 +554,7 @@ var Schema = /** @class */ (function () {
                     case 0:
                         where = args.where;
                         //check inputs
-                        if (where && !Schema.checkInputs(where)) {
+                        if (where && !this.checkInputs(where)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _query = new Query().match("node", this._label);
@@ -601,11 +592,11 @@ var Schema = /** @class */ (function () {
                     case 0:
                         where = args.where, relation = args.relation;
                         //check inputs
-                        if (where && !Schema.checkInputs(where)) {
+                        if (where && !this.checkInputs(where)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         if (relation.destination.where &&
-                            !Schema.checkInputs(relation.destination.where)) {
+                            !this.checkInputs(relation.destination.where)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         dstLabel = relation.destination.schema === Schema.Self
@@ -650,10 +641,10 @@ var Schema = /** @class */ (function () {
                     case 0:
                         relationId = args.relationId, where = args.where, destinationWhere = args.destinationWhere;
                         //check inputs
-                        if (where && !Schema.checkInputs(where)) {
+                        if (where && !this.checkInputs(where)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
-                        if (destinationWhere && !Schema.checkInputs(destinationWhere)) {
+                        if (destinationWhere && !this.checkInputs(destinationWhere)) {
                             return [2 /*return*/, new Result(undefined, ErrorMessages.inputs)];
                         }
                         _b.label = 1;
@@ -755,22 +746,28 @@ var Schema = /** @class */ (function () {
         });
     };
     /**
+     * disables input checking for the next action
+     */
+    Schema.prototype.noCheck = function () {
+        this.__checkInputs = false;
+        return this;
+    };
+    /**
      * checks input data in order to prevent cypher injections
      * @param data
      */
-    Schema.checkInputs = function (data) {
+    Schema.prototype.checkInputs = function (data) {
         var regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
         var legal = true;
-        Object.keys(data).forEach(function (key) {
-            var currentData = String(data[key]);
-            if (data[key] instanceof NoCheck) {
-                console.log("dont check this one");
-            }
-            else if (regex.test(currentData)) {
-                console.log("illegal prop", currentData);
-                legal = false;
-            }
-        });
+        if (this.__checkInputs)
+            Object.keys(data).forEach(function (key) {
+                var currentData = String(data[key]);
+                if (regex.test(currentData)) {
+                    console.log("illegal prop", currentData);
+                    legal = false;
+                }
+            });
+        this.__checkInputs = true;
         return legal;
     };
     Schema.prototype.Logger = function (query, data) {
@@ -784,7 +781,6 @@ var Schema = /** @class */ (function () {
 }());
 
 exports.Neo4jProvider = Neo4jProvider;
-exports.NoCheck = NoCheck;
 exports.Query = Query;
 exports.Result = Result;
 exports.Schema = Schema;

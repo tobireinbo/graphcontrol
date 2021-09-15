@@ -13,6 +13,7 @@ export default class Schema<Properties> {
     private _relations?;
     private _neo4jProvider;
     private __queryLogs;
+    private __checkInputs;
     constructor(neo4jProvider: Neo4jProvider, label: string, relations?: Array<{
         schema: string;
         label: string;
@@ -99,10 +100,14 @@ export default class Schema<Properties> {
      */
     checkMatch(where: Optional<Properties>): Promise<boolean>;
     /**
+     * disables input checking for the next action
+     */
+    noCheck(): this;
+    /**
      * checks input data in order to prevent cypher injections
      * @param data
      */
-    private static checkInputs;
+    private checkInputs;
     private Logger;
 }
 export {};

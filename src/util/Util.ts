@@ -13,7 +13,3 @@ export default class Util {
     dataKeysAsArray.map((key, index) => cb(key, index, length));
   }
 }
-
-export class NoCheck<Type> {
-  constructor(public value: Type) {}
-}
