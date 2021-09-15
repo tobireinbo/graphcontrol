@@ -775,5 +775,5 @@ var Schema = /** @class */ (function () {
     return Schema;
 }());
 
-export { Neo4jProvider, Query, Result, Schema };
+export { Neo4jProvider, NoCheck, Query, Result, Schema };
 //# sourceMappingURL=index.esm.js.map

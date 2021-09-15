@@ -784,6 +784,7 @@ var Schema = /** @class */ (function () {
 }());
 
 exports.Neo4jProvider = Neo4jProvider;
+exports.NoCheck = NoCheck;
 exports.Query = Query;
 exports.Result = Result;
 exports.Schema = Schema;
