@@ -8,3 +8,7 @@ export default class Util {
         [key: string]: unknown;
     }, cb: (key: string, index: number, length: number) => void): void;
 }
+export declare class NoCheck<Type> {
+    value: Type;
+    constructor(value: Type);
+}

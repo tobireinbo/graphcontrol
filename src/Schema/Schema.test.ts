@@ -1,5 +1,6 @@
 import { Query, Schema } from "..";
 import { provider } from "../util/provider";
+import { NoCheck } from "../util/Util";
 import Result, { ErrorMessages } from "./Result";
 
 const testSchema = new Schema<{ uid: string; title: string; rating: number }>(
@@ -101,6 +102,17 @@ test("illegal inputs", async () => {
     data: { title: "}-[:HAS_NODE]->(z) RETURN z", uid: "12345", rating: 0 },
   });
   expect(result).toStrictEqual(new Result(undefined, ErrorMessages.inputs));
+});
+
+test("unchecked", async () => {
+  const schema = new Schema<{ hash: NoCheck<string> }>(provider, "Test2");
+  const result = await schema.createNode({
+    data: { hash: new NoCheck("907wv.-7#58902))<{3?") },
+  });
+
+  expect(result).toStrictEqual(
+    new Result([{ hash: "907wv.-7#58902))<{3?" }], undefined)
+  );
 });
 
 afterAll(async () => {

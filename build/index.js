@@ -274,6 +274,12 @@ var Util = /** @class */ (function () {
     };
     return Util;
 }());
+var NoCheck = /** @class */ (function () {
+    function NoCheck(value) {
+        this.value = value;
+    }
+    return NoCheck;
+}());
 
 var Query = /** @class */ (function () {
     function Query() {
@@ -366,8 +372,12 @@ var Query = /** @class */ (function () {
     };
     Query.prototype.addToData = function (key, value) {
         var _a;
+        var _value = value;
+        if (value instanceof NoCheck) {
+            _value = value.value;
+        }
         var uniqueKey = key + this.dataKeyCounter;
-        Object.assign(this.data, (_a = {}, _a[uniqueKey] = value, _a));
+        Object.assign(this.data, (_a = {}, _a[uniqueKey] = _value, _a));
         this.dataKeyCounter++;
         return uniqueKey;
     };
@@ -753,7 +763,10 @@ var Schema = /** @class */ (function () {
         var legal = true;
         Object.keys(data).forEach(function (key) {
             var currentData = String(data[key]);
-            if (regex.test(currentData)) {
+            if (data[key] instanceof NoCheck) {
+                console.log("dont check this one");
+            }
+            else if (regex.test(currentData)) {
                 console.log("illegal prop", currentData);
                 legal = false;
             }

@@ -1,5 +1,5 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
-import Util from "../util/Util";
+import Util, { NoCheck } from "../util/Util";
 import Query, { Direction } from "./Query";
 import Result, { ErrorMessages, serverError } from "./Result";
 
@@ -390,7 +390,9 @@ export default class Schema<Properties> {
 
     Object.keys(data).forEach((key: string) => {
       const currentData = String(data[key]);
-      if (regex.test(currentData)) {
+      if (data[key] instanceof NoCheck) {
+        console.log("dont check this one");
+      } else if (regex.test(currentData)) {
         console.log("illegal prop", currentData);
         legal = false;
       }

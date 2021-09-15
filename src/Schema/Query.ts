@@ -1,4 +1,4 @@
-import Util from "../util/Util";
+import Util, { NoCheck } from "../util/Util";
 
 type Properties = { [key: string]: any };
 export type Direction = "to" | "from" | ">" | "<";
@@ -131,8 +131,12 @@ export default class Query {
   }
 
   addToData(key: string, value: unknown) {
+    let _value = value;
+    if (value instanceof NoCheck) {
+      _value = value.value;
+    }
     const uniqueKey = key + this.dataKeyCounter;
-    Object.assign(this.data, { [uniqueKey]: value });
+    Object.assign(this.data, { [uniqueKey]: _value });
     this.dataKeyCounter++;
     return uniqueKey;
   }
