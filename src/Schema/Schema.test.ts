@@ -133,9 +133,13 @@ test("get nodes with required Relations", async () => {
     where: { name: "website" },
     destinationWhere: { name: "me" },
   });
-  const res = await project.getNodesWithRelation({
-    relationId: "user",
-    destinationWhere: { name: "me" },
+  const res = await project.getNodes({
+    requiredRelations: [
+      {
+        relationId: "user",
+        where: { name: "me" },
+      },
+    ],
   });
 
   expect(res).toStrictEqual(new Result([{ name: "website" }], undefined));

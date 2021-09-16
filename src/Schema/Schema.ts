@@ -18,6 +18,8 @@ type Relation = {
   id: string;
   direction?: Direction;
 };
+
+type RelationCheck = { relationId: string; where: Optional<_Properties> };
 export default class Schema<Properties> {
   static Self = "__self__";
 
@@ -58,6 +60,7 @@ export default class Schema<Properties> {
   async getNodes(args?: {
     where?: Optional<Properties>;
     includeRelatedNodes?: boolean;
+    requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<Array<Properties>>> {
     //check inputs
     if (args?.where && !this.checkInputs(args.where)) {
@@ -65,6 +68,8 @@ export default class Schema<Properties> {
     }
 
     const _query = new Query().match("node", this._label);
+
+    this.checkRelations(_query, args.requiredRelations);
 
     if (args?.where) {
       Util.objectToArray(args.where, (key) => {
@@ -111,8 +116,9 @@ export default class Schema<Properties> {
    */
   async createNode(args: {
     data: Properties;
+    requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<Array<Properties>>> {
-    const { data } = args;
+    const { data, requiredRelations } = args;
 
     //check inputs
     if (data && !this.checkInputs(data)) {
@@ -120,6 +126,8 @@ export default class Schema<Properties> {
     }
 
     const _query = new Query().create("node", this._label, data);
+
+    this.checkRelations(_query, requiredRelations);
 
     this.Logger(_query.get("node"), { ...data });
 
@@ -143,8 +151,9 @@ export default class Schema<Properties> {
   async updateNode(args: {
     where: Optional<Properties>;
     data: Optional<Properties>;
+    requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<Array<Properties>>> {
-    const { where, data } = args;
+    const { where, data, requiredRelations } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -155,6 +164,9 @@ export default class Schema<Properties> {
     }
 
     const _query = new Query().match("node", this._label);
+
+    this.checkRelations(_query, requiredRelations);
+
     Util.objectToArray(where, (key) => {
       _query.where("node", key, where[key]);
     });
@@ -184,8 +196,9 @@ export default class Schema<Properties> {
   async deleteNode(args: {
     where: Optional<Properties>;
     includeRelatedNodes?: boolean; //TO-DO
+    relations?: Array<RelationCheck>;
   }): Promise<Result<boolean>> {
-    const { where } = args;
+    const { where, relations } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -193,6 +206,8 @@ export default class Schema<Properties> {
     }
 
     const _query = new Query().match("node", this._label);
+
+    this.checkRelations(_query, relations);
 
     Util.objectToArray(where, (key) => {
       _query.where("node", key, where[key]);
@@ -226,8 +241,9 @@ export default class Schema<Properties> {
       direction: Direction;
       destination: { schema: string; where: Optional<_Properties> };
     };
+    requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<boolean>> {
-    const { where, relation } = args;
+    const { where, relation, requiredRelations } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -248,6 +264,8 @@ export default class Schema<Properties> {
     Util.objectToArray(where, (key) => {
       _query.where("n1", key, where[key]);
     });
+
+    this.checkRelations(_query, requiredRelations);
 
     _query.match("n2", dstLabel);
     Util.objectToArray(relation.destination.where, (key) => {
@@ -281,8 +299,9 @@ export default class Schema<Properties> {
     relationId: string;
     where: Optional<Properties>;
     destinationWhere: Optional<_Properties>;
+    requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<boolean>> {
-    const { relationId, where, destinationWhere } = args;
+    const { relationId, where, destinationWhere, requiredRelations } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -291,12 +310,12 @@ export default class Schema<Properties> {
     if (destinationWhere && !this.checkInputs(destinationWhere)) {
       return inputsError;
     }
-    try {
-      const relation = this._relations.find((r) => r.id === relationId);
+    const relation = this._relations.find((r) => r.id === relationId);
 
-      if (!relation) {
-        throw new Error(ErrorMessages.relation);
-      }
+    if (!relation) {
+      throw new Error(ErrorMessages.relation);
+    }
+    try {
       return await this.createStaticRelation({
         where,
         relation: {
@@ -305,39 +324,6 @@ export default class Schema<Properties> {
           destination: { schema: relation.schema, where: destinationWhere },
         },
       });
-    } catch {
-      return serverError;
-    }
-  }
-
-  async getNodesWithRelation(args: {
-    relationId: string;
-    where?: Optional<Properties>;
-    destinationWhere?: Optional<_Properties>;
-  }) {
-    const { relationId, where, destinationWhere } = args;
-
-    if (where && !this.checkInputs(where)) {
-      return inputsError;
-    }
-    if (destinationWhere && !this.checkInputs(destinationWhere)) {
-      return inputsError;
-    }
-    const currentRelation = this._relations.find((r) => r.id === relationId);
-    const dstLabel = this.resolveSchema(currentRelation.schema);
-    const _query = new Query()
-      .match("node", this._label, where)
-      .relatation("r", currentRelation.label, currentRelation.direction)
-      .node("dst", dstLabel, destinationWhere);
-
-    this.Logger(_query.get("node"), _query.data);
-
-    try {
-      const exeQuery = await this._neo4jProvider.query(
-        _query.get("node"),
-        _query.data
-      );
-      return new Result(Neo4jProvider.formatRecords(exeQuery), undefined);
     } catch {
       return serverError;
     }
@@ -352,8 +338,9 @@ export default class Schema<Properties> {
     relationId: string;
     where?: Optional<Properties>;
     destinationWhere?: Optional<_Properties>;
+    requiredRelations?: Array<RelationCheck>;
   }) {
-    const { relationId, where, destinationWhere } = args;
+    const { relationId, where, destinationWhere, requiredRelations } = args;
     const currentRelation = this._relations.find((r) => r.id === relationId);
     if (!currentRelation) {
       throw new Error(ErrorMessages.relation);
@@ -365,6 +352,8 @@ export default class Schema<Properties> {
       .match("src", this._label, where)
       .relatation("r", currentRelation.label, currentRelation.direction || "to")
       .node("dst", dstLabel, destinationWhere);
+
+    this.checkRelations(_query, requiredRelations);
 
     _query.delete(["r"]);
 
@@ -420,6 +409,27 @@ export default class Schema<Properties> {
 
   private resolveSchema(schema: string) {
     return schema === Schema.Self ? this._label : schema;
+  }
+
+  private checkRelations(
+    query: Query,
+    relations: Array<RelationCheck> | undefined
+  ) {
+    if (relations) {
+      relations.forEach((rel) => {
+        const currentRelation = this._relations.find(
+          (r) => r.id === rel.relationId
+        );
+        query
+          .whereNode("node")
+          .relatation(
+            undefined,
+            currentRelation.label,
+            currentRelation.direction
+          )
+          .node(undefined, currentRelation.schema, rel.where);
+      });
+    }
   }
 
   /**

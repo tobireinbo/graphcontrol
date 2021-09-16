@@ -1,7 +1,7 @@
 import Util from "../util/Util";
 
 type Properties = { [key: string]: any };
-export type Direction = "to" | "from" | ">" | "<";
+export type Direction = "to" | "from" | ">" | "<" | "none";
 
 export default class Query {
   private query: string;
@@ -89,8 +89,9 @@ export default class Query {
 
   relatation(varName?: string, label?: string, direction?: Direction) {
     const isTo = direction === "to" || direction === ">";
+    const isNone = direction === "none";
     //prettier-ignore
-    this.query += `${!isTo ? "<" : ""}-[${varName ? varName : ""}${label ? ":" + label : ""}]-${isTo ? ">" : ""}`;
+    this.query += `${!isTo && !isNone  ? "<" : ""}-[${varName ? varName : ""}${label ? ":" + label : ""}]-${isTo && !isNone? ">" : ""}`;
 
     this._lastSyntax = "relation";
     return this;

@@ -7,6 +7,10 @@ export declare type Optional<Type> = {
 declare type _Properties = {
     [key: string]: unknown;
 };
+declare type RelationCheck = {
+    relationId: string;
+    where: Optional<_Properties>;
+};
 export default class Schema<Properties> {
     static Self: string;
     private _label;
@@ -29,6 +33,7 @@ export default class Schema<Properties> {
     getNodes(args?: {
         where?: Optional<Properties>;
         includeRelatedNodes?: boolean;
+        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<Array<Properties>>>;
     /**
      * Create Node for Schema
@@ -37,6 +42,7 @@ export default class Schema<Properties> {
      */
     createNode(args: {
         data: Properties;
+        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<Array<Properties>>>;
     /**
      *
@@ -46,6 +52,7 @@ export default class Schema<Properties> {
     updateNode(args: {
         where: Optional<Properties>;
         data: Optional<Properties>;
+        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<Array<Properties>>>;
     /**
      *
@@ -55,6 +62,7 @@ export default class Schema<Properties> {
     deleteNode(args: {
         where: Optional<Properties>;
         includeRelatedNodes?: boolean;
+        relations?: Array<RelationCheck>;
     }): Promise<Result<boolean>>;
     /**
      *
@@ -71,6 +79,7 @@ export default class Schema<Properties> {
                 where: Optional<_Properties>;
             };
         };
+        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<boolean>>;
     /**
      * create a relation specified in the schema.
@@ -81,12 +90,8 @@ export default class Schema<Properties> {
         relationId: string;
         where: Optional<Properties>;
         destinationWhere: Optional<_Properties>;
+        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<boolean>>;
-    getNodesWithRelation(args: {
-        relationId: string;
-        where?: Optional<Properties>;
-        destinationWhere?: Optional<_Properties>;
-    }): Promise<Result<any>>;
     /**
      * delete a relation specified in the schema.
      * @param args
@@ -96,6 +101,7 @@ export default class Schema<Properties> {
         relationId: string;
         where?: Optional<Properties>;
         destinationWhere?: Optional<_Properties>;
+        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<any>>;
     /**
      * executes a match query with the given where properties
@@ -109,6 +115,7 @@ export default class Schema<Properties> {
      */
     noCheck(): this;
     private resolveSchema;
+    private checkRelations;
     /**
      * checks input data in order to prevent cypher injections
      * @param data
