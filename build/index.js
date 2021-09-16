@@ -325,15 +325,15 @@ var Query = /** @class */ (function () {
     Query.prototype.merge = function (var1, var2, relVar, relLabel, direction) {
         this.insertWhiteSpace();
         this.query += "MERGE ";
-        this.node(var1).relatation(relVar, relLabel, direction).node(var2);
+        this.node(var1).relation(relVar, relLabel, direction).node(var2);
         this._lastSyntax = "merge";
         return this;
     };
-    Query.prototype.relatation = function (varName, label, direction) {
+    Query.prototype.relation = function (varName, label, direction, hops) {
         var isTo = direction === "to" || direction === ">";
         var isNone = direction === "none";
         //prettier-ignore
-        this.query += (!isTo && !isNone ? "<" : "") + "-[" + (varName ? varName : "") + (label ? ":" + label : "") + "]-" + (isTo && !isNone ? ">" : "");
+        this.query += (!isTo && !isNone ? "<" : "") + "-[" + (varName ? varName : "") + (label ? ":" + label : "") + (hops ? hops : "") + "]-" + (isTo && !isNone ? ">" : "");
         return this;
     };
     Query.prototype.where = function (varName, key, value, not) {
@@ -447,7 +447,7 @@ var Schema = /** @class */ (function () {
                                 var dstLabel = _this.resolveSchema(rel.schema);
                                 _query
                                     .optionalMatch("node")
-                                    .relatation(undefined, rel.label, ">")
+                                    .relation(undefined, rel.label, ">", rel.hops)
                                     .node("dst" + index, dstLabel);
                                 if (index === 0) {
                                     returnString += "{.*";
@@ -559,17 +559,17 @@ var Schema = /** @class */ (function () {
      */
     Schema.prototype.deleteNode = function (args) {
         return __awaiter(this, void 0, void 0, function () {
-            var where, relations, _query, exeQuery, confirm_1;
+            var where, requiredRelations, _query, exeQuery, confirm_1;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        where = args.where, relations = args.relations;
+                        where = args.where, requiredRelations = args.requiredRelations;
                         //check inputs
                         if (where && !this.checkInputs(where)) {
                             return [2 /*return*/, inputsError];
                         }
                         _query = new Query().match("node", this._label);
-                        this.checkRelations(_query, relations);
+                        this.checkRelations(_query, requiredRelations);
                         Util.objectToArray(where, function (key) {
                             _query.where("node", key, where[key]);
                         });
@@ -701,7 +701,7 @@ var Schema = /** @class */ (function () {
                         dstLabel = this.resolveSchema(currentRelation.schema);
                         _query = new Query()
                             .match("src", this._label, where)
-                            .relatation("r", currentRelation.label, currentRelation.direction || "to")
+                            .relation("r", currentRelation.label, currentRelation.direction || "to", currentRelation.hops)
                             .node("dst", dstLabel, destinationWhere);
                         this.checkRelations(_query, requiredRelations);
                         _query.delete(["r"]);
@@ -772,7 +772,7 @@ var Schema = /** @class */ (function () {
                 var currentRelation = _this._relations.find(function (r) { return r.id === rel.relationId; });
                 query
                     .whereNode("node")
-                    .relatation(undefined, currentRelation.label, currentRelation.direction)
+                    .relation(undefined, currentRelation.label, currentRelation.direction, currentRelation.hops)
                     .node(undefined, currentRelation.schema, rel.where);
             });
         }

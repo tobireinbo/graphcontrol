@@ -12,6 +12,7 @@ export declare type Relation = {
     label: string;
     id: string;
     direction?: Direction;
+    hops?: string;
 };
 declare type RelationCheck = {
     relationId: string;
@@ -29,6 +30,7 @@ export default class Schema<Properties> {
         label: string;
         id: string;
         direction?: Direction;
+        hops?: string;
     }>, queryLogs?: boolean);
     get label(): string;
     /**
@@ -67,7 +69,7 @@ export default class Schema<Properties> {
     deleteNode(args: {
         where: Optional<Properties>;
         includeRelatedNodes?: boolean;
-        relations?: Array<RelationCheck>;
+        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<boolean>>;
     /**
      *

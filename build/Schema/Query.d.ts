@@ -16,7 +16,7 @@ export default class Query {
     create(varName?: string, label?: string, properties?: Properties): this;
     node(varName?: string, label?: string, properties?: Properties): this;
     merge(var1: any, var2: any, relVar: any, relLabel: any, direction: Direction): this;
-    relatation(varName?: string, label?: string, direction?: Direction): this;
+    relation(varName?: string, label?: string, direction?: Direction, hops?: string): this;
     where(varName?: string, key?: string, value?: unknown, not?: boolean): this;
     whereNode(varName?: string): this;
     set(varName: string, key: string, value: unknown): this;

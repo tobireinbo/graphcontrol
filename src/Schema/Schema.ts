@@ -17,6 +17,7 @@ export type Relation = {
   label: string;
   id: string;
   direction?: Direction;
+  hops?: string;
 };
 
 type RelationCheck = { relationId: string; where: Optional<_Properties> };
@@ -38,6 +39,7 @@ export default class Schema<Properties> {
       label: string;
       id: string;
       direction?: Direction;
+      hops?: string;
     }>,
     queryLogs?: boolean
   ) {
@@ -83,7 +85,7 @@ export default class Schema<Properties> {
 
         _query
           .optionalMatch("node")
-          .relatation(undefined, rel.label, ">")
+          .relation(undefined, rel.label, ">", rel.hops)
           .node(`dst${index}`, dstLabel);
 
         if (index === 0) {
@@ -194,9 +196,9 @@ export default class Schema<Properties> {
   async deleteNode(args: {
     where: Optional<Properties>;
     includeRelatedNodes?: boolean; //TO-DO
-    relations?: Array<RelationCheck>;
+    requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<boolean>> {
-    const { where, relations } = args;
+    const { where, requiredRelations } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -205,7 +207,7 @@ export default class Schema<Properties> {
 
     const _query = new Query().match("node", this._label);
 
-    this.checkRelations(_query, relations);
+    this.checkRelations(_query, requiredRelations);
 
     Util.objectToArray(where, (key) => {
       _query.where("node", key, where[key]);
@@ -348,7 +350,12 @@ export default class Schema<Properties> {
 
     const _query = new Query()
       .match("src", this._label, where)
-      .relatation("r", currentRelation.label, currentRelation.direction || "to")
+      .relation(
+        "r",
+        currentRelation.label,
+        currentRelation.direction || "to",
+        currentRelation.hops
+      )
       .node("dst", dstLabel, destinationWhere);
 
     this.checkRelations(_query, requiredRelations);
@@ -420,10 +427,11 @@ export default class Schema<Properties> {
         );
         query
           .whereNode("node")
-          .relatation(
+          .relation(
             undefined,
             currentRelation.label,
-            currentRelation.direction
+            currentRelation.direction,
+            currentRelation.hops
           )
           .node(undefined, currentRelation.schema, rel.where);
       });

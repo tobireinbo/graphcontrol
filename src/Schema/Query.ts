@@ -78,17 +78,22 @@ export default class Query {
     this.insertWhiteSpace();
 
     this.query += "MERGE ";
-    this.node(var1).relatation(relVar, relLabel, direction).node(var2);
+    this.node(var1).relation(relVar, relLabel, direction).node(var2);
 
     this._lastSyntax = "merge";
     return this;
   }
 
-  relatation(varName?: string, label?: string, direction?: Direction) {
+  relation(
+    varName?: string,
+    label?: string,
+    direction?: Direction,
+    hops?: string
+  ) {
     const isTo = direction === "to" || direction === ">";
     const isNone = direction === "none";
     //prettier-ignore
-    this.query += `${!isTo && !isNone  ? "<" : ""}-[${varName ? varName : ""}${label ? ":" + label : ""}]-${isTo && !isNone? ">" : ""}`;
+    this.query += `${!isTo && !isNone  ? "<" : ""}-[${varName ? varName : ""}${label ? ":" + label : ""}${hops ? hops : ""}]-${isTo && !isNone? ">" : ""}`;
 
     return this;
   }
