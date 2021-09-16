@@ -1,7 +1,8 @@
 export declare enum ErrorMessages {
     server = "Server Error",
     inputs = "Illegal Inputs",
-    relation = "No such Relation"
+    relation = "No such Relation",
+    forbidden = "Forbidden"
 }
 export default class Result<T> {
     data: undefined | T;
@@ -10,3 +11,4 @@ export default class Result<T> {
 }
 export declare const serverError: Result<any>;
 export declare const inputsError: Result<any>;
+export declare const forbiddenError: Result<any>;

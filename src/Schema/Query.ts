@@ -100,8 +100,12 @@ export default class Query {
   where(varName?: string, key?: string, value?: unknown, not?: boolean) {
     this.insertWhiteSpace();
 
+    const syntax = this._lastSyntax === "where" ? "AND" : "WHERE";
+
     const dataKey = this.addToData(key, value);
-    this.query += `WHERE${not ? " NOT" : ""} ${varName}.${key} = $${dataKey}`;
+    this.query += `${syntax}${
+      not ? " NOT" : ""
+    } ${varName}.${key} = $${dataKey}`;
 
     this._lastSyntax = "where";
     return this;

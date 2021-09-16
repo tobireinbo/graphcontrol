@@ -1,4 +1,4 @@
-import { Schema } from "..";
+import { Query, Schema } from "..";
 import { provider } from "../util/provider";
 import Result, { ErrorMessages } from "./Result";
 
@@ -133,6 +133,7 @@ test("get nodes with required Relations", async () => {
     where: { name: "website" },
     destinationWhere: { name: "me" },
   });
+
   const res = await project.getNodes({
     requiredRelations: [
       {

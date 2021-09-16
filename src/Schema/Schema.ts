@@ -12,7 +12,7 @@ type _Properties = {
   [key: string]: unknown;
 };
 
-type Relation = {
+export type Relation = {
   schema: string;
   label: string;
   id: string;
@@ -116,9 +116,9 @@ export default class Schema<Properties> {
    */
   async createNode(args: {
     data: Properties;
-    requiredRelations?: Array<RelationCheck>;
+    //requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<Array<Properties>>> {
-    const { data, requiredRelations } = args;
+    const { data } = args;
 
     //check inputs
     if (data && !this.checkInputs(data)) {
@@ -126,8 +126,6 @@ export default class Schema<Properties> {
     }
 
     const _query = new Query().create("node", this._label, data);
-
-    this.checkRelations(_query, requiredRelations);
 
     this.Logger(_query.get("node"), { ...data });
 
@@ -339,7 +337,7 @@ export default class Schema<Properties> {
     where?: Optional<Properties>;
     destinationWhere?: Optional<_Properties>;
     requiredRelations?: Array<RelationCheck>;
-  }) {
+  }): Promise<Result<boolean>> {
     const { relationId, where, destinationWhere, requiredRelations } = args;
     const currentRelation = this._relations.find((r) => r.id === relationId);
     if (!currentRelation) {

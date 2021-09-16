@@ -7,6 +7,12 @@ export declare type Optional<Type> = {
 declare type _Properties = {
     [key: string]: unknown;
 };
+export declare type Relation = {
+    schema: string;
+    label: string;
+    id: string;
+    direction?: Direction;
+};
 declare type RelationCheck = {
     relationId: string;
     where: Optional<_Properties>;
@@ -42,7 +48,6 @@ export default class Schema<Properties> {
      */
     createNode(args: {
         data: Properties;
-        requiredRelations?: Array<RelationCheck>;
     }): Promise<Result<Array<Properties>>>;
     /**
      *
@@ -102,7 +107,7 @@ export default class Schema<Properties> {
         where?: Optional<Properties>;
         destinationWhere?: Optional<_Properties>;
         requiredRelations?: Array<RelationCheck>;
-    }): Promise<Result<any>>;
+    }): Promise<Result<boolean>>;
     /**
      * executes a match query with the given where properties
      * and responds with a server error when no nodes are found

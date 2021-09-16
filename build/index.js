@@ -340,8 +340,9 @@ var Query = /** @class */ (function () {
     };
     Query.prototype.where = function (varName, key, value, not) {
         this.insertWhiteSpace();
+        var syntax = this._lastSyntax === "where" ? "AND" : "WHERE";
         var dataKey = this.addToData(key, value);
-        this.query += "WHERE" + (not ? " NOT" : "") + " " + varName + "." + key + " = $" + dataKey;
+        this.query += "" + syntax + (not ? " NOT" : "") + " " + varName + "." + key + " = $" + dataKey;
         this._lastSyntax = "where";
         return this;
     };
@@ -391,6 +392,7 @@ var ErrorMessages;
     ErrorMessages["server"] = "Server Error";
     ErrorMessages["inputs"] = "Illegal Inputs";
     ErrorMessages["relation"] = "No such Relation";
+    ErrorMessages["forbidden"] = "Forbidden";
 })(ErrorMessages || (ErrorMessages = {}));
 var Result = /** @class */ (function () {
     function Result(data, error) {
@@ -401,6 +403,7 @@ var Result = /** @class */ (function () {
 }());
 var serverError = new Result(undefined, ErrorMessages.server);
 var inputsError = new Result(undefined, ErrorMessages.inputs);
+new Result(undefined, ErrorMessages.forbidden);
 
 var Schema = /** @class */ (function () {
     function Schema(neo4jProvider, label, relations, queryLogs) {
@@ -480,17 +483,16 @@ var Schema = /** @class */ (function () {
      */
     Schema.prototype.createNode = function (args) {
         return __awaiter(this, void 0, void 0, function () {
-            var data, requiredRelations, _query, exeQuery, result;
+            var data, _query, exeQuery, result;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        data = args.data, requiredRelations = args.requiredRelations;
+                        data = args.data;
                         //check inputs
                         if (data && !this.checkInputs(data)) {
                             return [2 /*return*/, inputsError];
                         }
                         _query = new Query().create("node", this._label, data);
-                        this.checkRelations(_query, requiredRelations);
                         this.Logger(_query.get("node"), __assign({}, data));
                         _b.label = 1;
                     case 1:
