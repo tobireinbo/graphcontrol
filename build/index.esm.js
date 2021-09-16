@@ -340,7 +340,8 @@ var Query = /** @class */ (function () {
     };
     Query.prototype.whereNode = function (varName) {
         this.insertWhiteSpace();
-        this.query += "WHERE (" + varName + ")";
+        var syntax = this._lastSyntax === "where" ? "AND" : "WHERE";
+        this.query += syntax + " (" + varName + ")";
         this._lastSyntax = "node";
         return this;
     };

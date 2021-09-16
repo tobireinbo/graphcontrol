@@ -114,7 +114,9 @@ export default class Query {
   whereNode(varName?: string) {
     this.insertWhiteSpace();
 
-    this.query += `WHERE (${varName})`;
+    const syntax = this._lastSyntax === "where" ? "AND" : "WHERE";
+
+    this.query += `${syntax} (${varName})`;
 
     this._lastSyntax = "node";
     return this;
