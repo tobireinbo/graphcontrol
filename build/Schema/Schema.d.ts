@@ -9,7 +9,7 @@ declare type _Properties = {
 };
 export declare type Relation = {
     schema: string;
-    label: string;
+    label?: string;
     id: string;
     direction?: Direction;
     hops?: string;

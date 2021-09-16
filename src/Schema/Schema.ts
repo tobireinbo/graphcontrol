@@ -14,7 +14,7 @@ type _Properties = {
 
 export type Relation = {
   schema: string;
-  label: string;
+  label?: string;
   id: string;
   direction?: Direction;
   hops?: string;
