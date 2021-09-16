@@ -25,13 +25,7 @@ export default class Schema<Properties> {
     private _neo4jProvider;
     private __queryLogs;
     private __checkInputs;
-    constructor(neo4jProvider: Neo4jProvider, label: string, relations?: Array<{
-        schema: string;
-        label: string;
-        id: string;
-        direction?: Direction;
-        hops?: string;
-    }>, queryLogs?: boolean);
+    constructor(neo4jProvider: Neo4jProvider, label: string, relations?: Array<Relation>, queryLogs?: boolean);
     get label(): string;
     /**
      * get Nodes of Schema

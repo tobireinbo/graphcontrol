@@ -34,13 +34,7 @@ export default class Schema<Properties> {
   constructor(
     neo4jProvider: Neo4jProvider,
     label: string,
-    relations?: Array<{
-      schema: string;
-      label: string;
-      id: string;
-      direction?: Direction;
-      hops?: string;
-    }>,
+    relations?: Array<Relation>,
     queryLogs?: boolean
   ) {
     this._label = label;
