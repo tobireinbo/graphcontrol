@@ -28,3 +28,19 @@ test("comples", () => {
     "MATCH (n:Test {title: $title0})-[r:HAS]->(m:Test2 {rating: $rating1}) WHERE m.id = $id2"
   );
 });
+
+test("node wheres", () => {
+  const query = new Query();
+  query
+    .match("n")
+    .whereNode("n")
+    .relatation("r", "HAS", "to")
+    .node("m")
+    .whereNode("n")
+    .relatation("r2", "HAS", "to")
+    .node("l");
+
+  expect(query.get()).toBe(
+    "MATCH (n) WHERE (n)-[r:HAS]->(m) AND (n)-[r2:HAS]->(l)"
+  );
+});

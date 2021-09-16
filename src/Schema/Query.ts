@@ -9,10 +9,8 @@ export default class Query {
   private dataKeyCounter: number;
   private _lastSyntax:
     | "match"
-    | "relation"
     | "where"
     | "create"
-    | "node"
     | "merge"
     | "set"
     | "delete";
@@ -73,7 +71,6 @@ export default class Query {
       label ? ":" + label : ""
     }${props})`;
 
-    this._lastSyntax = "node";
     return this;
   }
 
@@ -93,7 +90,6 @@ export default class Query {
     //prettier-ignore
     this.query += `${!isTo && !isNone  ? "<" : ""}-[${varName ? varName : ""}${label ? ":" + label : ""}]-${isTo && !isNone? ">" : ""}`;
 
-    this._lastSyntax = "relation";
     return this;
   }
 
@@ -118,7 +114,7 @@ export default class Query {
 
     this.query += `${syntax} (${varName})`;
 
-    this._lastSyntax = "node";
+    this._lastSyntax = "where";
     return this;
   }
 
@@ -154,8 +150,6 @@ export default class Query {
   }
 
   private insertWhiteSpace() {
-    if (this._lastSyntax && !(this._lastSyntax === "relation")) {
-      this.query += " ";
-    }
+    if (this._lastSyntax) this.query += " ";
   }
 }

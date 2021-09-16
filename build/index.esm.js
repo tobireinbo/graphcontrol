@@ -312,7 +312,6 @@ var Query = /** @class */ (function () {
                     props += "}";
             });
         this.query += "(" + (varName ? varName : "") + (label ? ":" + label : "") + props + ")";
-        this._lastSyntax = "node";
         return this;
     };
     Query.prototype.merge = function (var1, var2, relVar, relLabel, direction) {
@@ -327,7 +326,6 @@ var Query = /** @class */ (function () {
         var isNone = direction === "none";
         //prettier-ignore
         this.query += (!isTo && !isNone ? "<" : "") + "-[" + (varName ? varName : "") + (label ? ":" + label : "") + "]-" + (isTo && !isNone ? ">" : "");
-        this._lastSyntax = "relation";
         return this;
     };
     Query.prototype.where = function (varName, key, value, not) {
@@ -342,7 +340,7 @@ var Query = /** @class */ (function () {
         this.insertWhiteSpace();
         var syntax = this._lastSyntax === "where" ? "AND" : "WHERE";
         this.query += syntax + " (" + varName + ")";
-        this._lastSyntax = "node";
+        this._lastSyntax = "where";
         return this;
     };
     Query.prototype.set = function (varName, key, value) {
@@ -373,9 +371,8 @@ var Query = /** @class */ (function () {
         return uniqueKey;
     };
     Query.prototype.insertWhiteSpace = function () {
-        if (this._lastSyntax && !(this._lastSyntax === "relation")) {
+        if (this._lastSyntax)
             this.query += " ";
-        }
     };
     return Query;
 }());
