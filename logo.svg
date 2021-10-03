@@ -1,0 +1,66 @@
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <bx:grid x="0" y="0" width="12.5" height="12.5"></bx:grid>
+    <bx:guide x="250" y="250" angle="0"></bx:guide>
+    <bx:guide x="250" y="250" angle="90"></bx:guide>
+    <filter id="drop-shadow-filter-0" x="-500%" y="-500%" width="1000%" height="1000%" bx:preset="drop-shadow 1 0 0 20 0.3 rgba(0,0,0,0.3)">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="20" result="gaussian-blur-0"></feGaussianBlur>
+      <feOffset dx="0" dy="0" in="gaussian-blur-0" result="offset-0"></feOffset>
+      <feComponentTransfer result="offsetblur" in="offset-0">
+        <feFuncA id="spread-ctrl" type="linear" slope="0.6"></feFuncA>
+      </feComponentTransfer>
+      <feFlood flood-color="rgba(0,0,0,0.3)" result="flood-0"></feFlood>
+      <feComposite in2="offsetblur" operator="in" in="flood-0" result="composite-0"></feComposite>
+      <feMerge result="merge-0">
+        <feMergeNode in="composite-0"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+    <filter id="drop-shadow-filter-1" x="-500%" y="-500%" width="1000%" height="1000%" bx:preset="drop-shadow 1 0 0 20 0.3 rgba(0,0,0,0.3)">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="20"></feGaussianBlur>
+      <feOffset dx="0" dy="0"></feOffset>
+      <feComponentTransfer result="offsetblur">
+        <feFuncA id="spread-ctrl" type="linear" slope="0.6"></feFuncA>
+      </feComponentTransfer>
+      <feFlood flood-color="rgba(0,0,0,0.3)"></feFlood>
+      <feComposite in2="offsetblur" operator="in"></feComposite>
+      <feMerge>
+        <feMergeNode></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+    <filter id="drop-shadow-filter-2" x="-500%" y="-500%" width="1000%" height="1000%" bx:preset="drop-shadow 1 0 0 20 0.3 rgba(0,0,0,0.3)">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="20"></feGaussianBlur>
+      <feOffset dx="0" dy="0"></feOffset>
+      <feComponentTransfer result="offsetblur">
+        <feFuncA id="spread-ctrl" type="linear" slope="0.6"></feFuncA>
+      </feComponentTransfer>
+      <feFlood flood-color="rgba(0,0,0,0.3)"></feFlood>
+      <feComposite in2="offsetblur" operator="in"></feComposite>
+      <feMerge>
+        <feMergeNode></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+    <filter id="drop-shadow-filter-3" x="-500%" y="-500%" width="1000%" height="1000%" bx:preset="drop-shadow 1 0 0 20 0.3 rgba(0,0,0,0.3)">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="20"></feGaussianBlur>
+      <feOffset dx="0" dy="0"></feOffset>
+      <feComponentTransfer result="offsetblur">
+        <feFuncA id="spread-ctrl" type="linear" slope="0.6"></feFuncA>
+      </feComponentTransfer>
+      <feFlood flood-color="rgba(0,0,0,0.3)"></feFlood>
+      <feComposite in2="offsetblur" operator="in"></feComposite>
+      <feMerge>
+        <feMergeNode></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+  <path style="fill: rgb(85, 75, 254); stroke-width: 5px; stroke: rgb(255, 255, 255);" d="M 87.5 256.25 L 212.5 443.75 L 275 381.251 L 87.5 256.25 Z"></path>
+  <path style="fill: rgb(85, 75, 254); stroke-width: 5px; stroke: rgb(255, 255, 255);" d="M 56.25 99.999 L 181.25 287.5 L 243.75 225 L 56.25 99.999 Z" transform="matrix(0, 1, -1, 0, 343.749504, 43.749504)"></path>
+  <path style="fill: rgb(85, 75, 254); stroke: rgb(255, 255, 255); stroke-width: 5px;" d="M 212.5 68.75 L 337.499 256.25 L 400 193.751 L 212.5 68.75 Z" transform="matrix(-1, 0, 0, -1, 612.5, 325)"></path>
+  <circle style="fill: rgb(84, 75, 255); stroke: rgb(255, 255, 255); stroke-width: 5px; filter: url(#drop-shadow-filter-2);" cx="243.75" cy="412.5" r="62.5"></circle>
+  <circle style="fill: rgb(84, 75, 255); stroke: rgb(255, 255, 255); stroke-width: 5px; filter: url(#drop-shadow-filter-1);" cx="243.75" cy="100" r="62.5"></circle>
+  <circle style="fill: rgb(84, 75, 255); stroke: rgb(255, 255, 255); stroke-width: 5px; filter: url(#drop-shadow-filter-3);" cx="400" cy="256.25" r="62.5"></circle>
+  <circle style="fill: rgb(84, 75, 255); stroke: rgb(255, 255, 255); stroke-width: 5px; filter: url(#drop-shadow-filter-0);" cx="87.5" cy="256.25" r="62.5"></circle>
+</svg>

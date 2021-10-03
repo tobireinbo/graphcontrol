@@ -1,1 +1,3 @@
 # graphcontrol
+
+![logo](./logo.svg)
