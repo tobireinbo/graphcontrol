@@ -76,7 +76,7 @@ var Neo4jProvider = /** @class */ (function () {
     function Neo4jProvider(setup) {
         this.setup = setup;
         if (this.setup.url && this.setup.username && this.setup.password) {
-            this._driver = neo4j__default['default'].driver(this.setup.url, neo4j__default['default'].auth.basic(this.setup.username, this.setup.password));
+            this._driver = neo4j__default['default'].driver(this.setup.url, neo4j__default['default'].auth.basic(this.setup.username, this.setup.password), { disableLosslessIntegers: true });
         }
         else {
             throw new Error("credentials are undefined");
@@ -91,25 +91,29 @@ var Neo4jProvider = /** @class */ (function () {
      */
     Neo4jProvider.prototype.query = function (cypher, params) {
         return __awaiter(this, void 0, void 0, function () {
-            var session, result, err_1;
+            var session, txc, result, err_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         session = this._driver.session();
+                        txc = session.beginTransaction();
                         _a.label = 1;
                     case 1:
-                        _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, session.run(cypher, params)];
+                        _a.trys.push([1, 3, 4, 5]);
+                        return [4 /*yield*/, txc.run(cypher, params)];
                     case 2:
                         result = _a.sent();
-                        session.close();
+                        txc.commit();
                         return [2 /*return*/, result];
                     case 3:
                         err_1 = _a.sent();
-                        session.close();
+                        txc.rollback();
                         console.log("Neo4j Error: ", err_1);
                         throw err_1;
-                    case 4: return [2 /*return*/];
+                    case 4:
+                        session.close();
+                        return [7 /*endfinally*/];
+                    case 5: return [2 /*return*/];
                 }
             });
         });

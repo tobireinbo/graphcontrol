@@ -1,12 +1,11 @@
 import Neo4jProvider from "../Provider/Neo4jProvider";
 import Util from "../util/Util";
-import Query, { Direction } from "./Query";
-import Result, { ErrorMessages, inputsError, serverError } from "./Result";
-
-//turns every prop of given Type in an optional one
-export type Optional<Type> = {
-  [Property in keyof Type]+?: Type[Property];
-};
+import Query, { Direction } from "../Query/Query";
+import Result, {
+  ErrorMessages,
+  inputsError,
+  serverError,
+} from "../Result/Result";
 
 type _Properties = {
   [key: string]: unknown;
@@ -20,7 +19,7 @@ export type Relation = {
   hops?: string;
 };
 
-type RelationCheck = { relationId: string; where: Optional<_Properties> };
+type RelationQuery = { id: string; where?: Partial<_Properties> };
 export default class Schema<Properties> {
   static Self = "__self__";
 
@@ -54,9 +53,8 @@ export default class Schema<Properties> {
    * @returns
    */
   async getNodes(args?: {
-    where?: Optional<Properties>;
-    includeRelatedNodes?: boolean;
-    requiredRelations?: Array<RelationCheck>;
+    where?: Partial<Properties>;
+    relations?: Array<RelationQuery>;
   }): Promise<Result<Array<Properties>>> {
     //check inputs
     if (args?.where && !this.checkInputs(args.where)) {
@@ -65,22 +63,28 @@ export default class Schema<Properties> {
 
     const _query = new Query().match("node", this._label);
 
-    this.checkRelations(_query, args.requiredRelations);
-
     if (args?.where) {
       Util.objectToArray(args.where, (key) => {
         _query.where("node", key, args.where[key]);
       });
     }
     let returnString = "node";
-    if (args?.includeRelatedNodes) {
-      this._relations.forEach((rel, index) => {
-        const dstLabel = this.resolveSchema(rel.schema);
+    if (args?.relations) {
+      args.relations.forEach((relation, index) => {
+        const currentRelation = this._relations.find(
+          (rel) => rel.id === relation.id
+        );
+        const dstLabel = this.resolveSchema(currentRelation.schema);
 
         _query
           .optionalMatch("node")
-          .relation(undefined, rel.label, ">", rel.hops)
-          .node(`dst${index}`, dstLabel);
+          .relation(
+            undefined,
+            currentRelation.label,
+            currentRelation.direction || ">",
+            currentRelation.hops
+          )
+          .node(`dst${index}`, dstLabel, relation.where);
 
         if (index === 0) {
           returnString += "{.*";
@@ -110,29 +114,37 @@ export default class Schema<Properties> {
    * @param args
    * @returns
    */
-  async createNode(args: {
-    data: Properties;
-    //requiredRelations?: Array<RelationCheck>;
-  }): Promise<Result<Array<Properties>>> {
-    const { data } = args;
+  async createNodes(
+    nodes: Array<Properties>
+  ): Promise<Result<Array<Properties>>> {
+    const _query = new Query();
+    let returnString = "";
 
     //check inputs
-    if (data && !this.checkInputs(data)) {
-      return inputsError;
+    for (let i = 0; i < nodes.length; i++) {
+      if (!this.checkInputs(nodes[i])) {
+        return inputsError;
+      }
+
+      const nodeVar = "node" + i;
+      _query.create(nodeVar, this._label, nodes[i]);
+      returnString += nodeVar;
+      if (i < nodes.length - 1) {
+        returnString += ", ";
+      }
     }
 
-    const _query = new Query().create("node", this._label, data);
-
-    this.Logger(_query.get("node"), { ...data });
+    this.Logger(_query.get(), {});
 
     try {
       const exeQuery = await this._neo4jProvider.query(
-        _query.get("node"),
+        _query.get(returnString),
         _query.data
       );
       const result = Neo4jProvider.formatRecords(exeQuery);
       return new Result(result, undefined);
-    } catch {
+    } catch (err) {
+      console.log(err);
       return serverError;
     }
   }
@@ -143,11 +155,10 @@ export default class Schema<Properties> {
    * @returns
    */
   async updateNode(args: {
-    where: Optional<Properties>;
-    data: Optional<Properties>;
-    requiredRelations?: Array<RelationCheck>;
+    where: Partial<Properties>;
+    data: Partial<Properties>;
   }): Promise<Result<Array<Properties>>> {
-    const { where, data, requiredRelations } = args;
+    const { where, data } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -158,8 +169,6 @@ export default class Schema<Properties> {
     }
 
     const _query = new Query().match("node", this._label);
-
-    this.checkRelations(_query, requiredRelations);
 
     Util.objectToArray(where, (key) => {
       _query.where("node", key, where[key]);
@@ -188,11 +197,9 @@ export default class Schema<Properties> {
    * @returns
    */
   async deleteNode(args: {
-    where: Optional<Properties>;
-    includeRelatedNodes?: boolean; //TO-DO
-    requiredRelations?: Array<RelationCheck>;
+    where: Partial<Properties>;
   }): Promise<Result<boolean>> {
-    const { where, requiredRelations } = args;
+    const { where } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -200,9 +207,6 @@ export default class Schema<Properties> {
     }
 
     const _query = new Query().match("node", this._label);
-
-    this.checkRelations(_query, requiredRelations);
-
     Util.objectToArray(where, (key) => {
       _query.where("node", key, where[key]);
     });
@@ -229,15 +233,14 @@ export default class Schema<Properties> {
    * @returns
    */
   async createStaticRelation(args: {
-    where: Optional<Properties>;
+    where: Partial<Properties>;
     relation: {
       label: string;
       direction: Direction;
-      destination: { schema: string; where: Optional<_Properties> };
+      destination: { schema: string; where: Partial<_Properties> };
     };
-    requiredRelations?: Array<RelationCheck>;
   }): Promise<Result<boolean>> {
-    const { where, relation, requiredRelations } = args;
+    const { where, relation } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
@@ -258,8 +261,6 @@ export default class Schema<Properties> {
     Util.objectToArray(where, (key) => {
       _query.where("n1", key, where[key]);
     });
-
-    this.checkRelations(_query, requiredRelations);
 
     _query.match("n2", dstLabel);
     Util.objectToArray(relation.destination.where, (key) => {
@@ -290,21 +291,19 @@ export default class Schema<Properties> {
    * @param args
    */
   async createRelation(args: {
-    relationId: string;
-    where: Optional<Properties>;
-    destinationWhere: Optional<_Properties>;
-    requiredRelations?: Array<RelationCheck>;
+    where: Partial<Properties>;
+    relation: RelationQuery;
   }): Promise<Result<boolean>> {
-    const { relationId, where, destinationWhere, requiredRelations } = args;
+    const { where, relation } = args;
 
     //check inputs
     if (where && !this.checkInputs(where)) {
       return inputsError;
     }
-    if (destinationWhere && !this.checkInputs(destinationWhere)) {
+    if (relation.where && !this.checkInputs(relation.where)) {
       return inputsError;
     }
-    const relation = this._relations.find((r) => r.id === relationId);
+    const currentRelation = this._relations.find((r) => r.id === relation.id);
 
     if (!relation) {
       throw new Error(ErrorMessages.relation);
@@ -313,9 +312,12 @@ export default class Schema<Properties> {
       return await this.createStaticRelation({
         where,
         relation: {
-          label: relation.label,
-          direction: relation.direction || "to",
-          destination: { schema: relation.schema, where: destinationWhere },
+          label: currentRelation.label,
+          direction: currentRelation.direction || "to",
+          destination: {
+            schema: currentRelation.schema,
+            where: relation.where,
+          },
         },
       });
     } catch {
@@ -329,13 +331,11 @@ export default class Schema<Properties> {
    * @returns
    */
   async deleteRelation(args: {
-    relationId: string;
-    where?: Optional<Properties>;
-    destinationWhere?: Optional<_Properties>;
-    requiredRelations?: Array<RelationCheck>;
+    where?: Partial<Properties>;
+    relation: RelationQuery;
   }): Promise<Result<boolean>> {
-    const { relationId, where, destinationWhere, requiredRelations } = args;
-    const currentRelation = this._relations.find((r) => r.id === relationId);
+    const { relation, where } = args;
+    const currentRelation = this._relations.find((r) => r.id === relation.id);
     if (!currentRelation) {
       throw new Error(ErrorMessages.relation);
     }
@@ -350,9 +350,7 @@ export default class Schema<Properties> {
         currentRelation.direction || "to",
         currentRelation.hops
       )
-      .node("dst", dstLabel, destinationWhere);
-
-    this.checkRelations(_query, requiredRelations);
+      .node("dst", dstLabel, relation.where);
 
     _query.delete(["r"]);
 
@@ -378,7 +376,7 @@ export default class Schema<Properties> {
    * @param res
    * @param where
    */
-  async checkMatch(where: Optional<Properties>): Promise<boolean> {
+  async checkMatch(where: Partial<Properties>): Promise<boolean> {
     try {
       const _query = new Query().match("n", this._label);
       Util.objectToArray(where, (key) => {
@@ -412,19 +410,17 @@ export default class Schema<Properties> {
 
   private checkRelations(
     query: Query,
-    relations: Array<RelationCheck> | undefined
+    relations: Array<RelationQuery> | undefined
   ) {
     if (relations) {
       relations.forEach((rel) => {
-        const currentRelation = this._relations.find(
-          (r) => r.id === rel.relationId
-        );
+        const currentRelation = this._relations.find((r) => r.id === rel.id);
         query
           .whereNode("node")
           .relation(
             undefined,
             currentRelation.label,
-            currentRelation.direction,
+            currentRelation.direction || ">",
             currentRelation.hops
           )
           .node(undefined, currentRelation.schema, rel.where);
@@ -436,7 +432,7 @@ export default class Schema<Properties> {
    * checks input data in order to prevent cypher injections
    * @param data
    */
-  private checkInputs(data: Optional<_Properties> | _Properties) {
+  private checkInputs(data: Partial<_Properties> | _Properties) {
     //const regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
     const regex = new RegExp(/["'`]/g);
     let legal = true;

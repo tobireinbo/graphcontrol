@@ -1,6 +1,6 @@
 import { Query, Schema } from "..";
 import { provider } from "../util/provider";
-import Result, { ErrorMessages } from "./Result";
+import Result, { ErrorMessages } from "../Result/Result";
 
 const testSchema = new Schema<{ uid: string; title: string; rating: number }>(
   provider,
@@ -16,9 +16,7 @@ test("(setup) clear db", async () => {
 });
 
 test("create node", async () => {
-  const result = await testSchema.createNode({
-    data: singleNode,
-  });
+  const result = await testSchema.createNodes([singleNode]);
   expect(result).toStrictEqual(new Result([singleNode], undefined));
 });
 
@@ -45,25 +43,31 @@ test("delete node", async () => {
 });
 
 test("(setup) create multiple nodes", async () => {
-  await testSchema.createNode({
-    data: { title: "first", uid: "f", rating: 3 },
-  });
-  await testSchema.createNode({
-    data: { title: "second", uid: "s", rating: 3 },
-  });
+  await testSchema.createNodes([
+    {
+      title: "first",
+      uid: "f",
+      rating: 3,
+    },
+    { title: "second", uid: "s", rating: 3 },
+  ]);
 });
 
 test("create relation", async () => {
   const result = await testSchema.createRelation({
-    relationId: "self rel",
     where: { uid: "f" },
-    destinationWhere: { uid: "s" },
+    relation: {
+      id: "self rel",
+      where: { uid: "s" },
+    },
   });
   expect(result).toStrictEqual(new Result(true, undefined));
 });
 
 test("get multiple nodes with relations", async () => {
-  const result = await testSchema.getNodes({ includeRelatedNodes: true });
+  const result = await testSchema.getNodes({
+    relations: [{ id: "self rel" }],
+  });
   expect(result).toStrictEqual(
     new Result(
       [
@@ -82,9 +86,8 @@ test("get multiple nodes with relations", async () => {
 
 test("delete relation", async () => {
   const result = await testSchema.deleteRelation({
-    relationId: "self rel",
+    relation: { id: "self rel", where: { uid: "s" } },
     where: { uid: "f" },
-    destinationWhere: { uid: "s" },
   });
   expect(result).toStrictEqual(new Result(true, undefined));
 });
@@ -97,22 +100,20 @@ test("delete multiple nodes", async () => {
 });
 
 test("illegal inputs", async () => {
-  const result = await testSchema.createNode({
-    data: { title: "test'test", uid: "12345", rating: 0 },
-  });
+  const result = await testSchema.createNodes([
+    { title: "test'test", uid: "12345", rating: 0 },
+  ]);
   expect(result).toStrictEqual(new Result(undefined, ErrorMessages.inputs));
 });
 
 test("unchecked", async () => {
   const schema = new Schema<{ hash: string }>(provider, "Test2");
-  const result = await schema.noCheck().createNode({
-    data: { hash: "''''```" },
-  });
+  const result = await schema.noCheck().createNodes([{ hash: "''''```" }]);
 
   expect(result).toStrictEqual(new Result([{ hash: "''''```" }], undefined));
 });
 
-test("get nodes with required Relations", async () => {
+test("get nodes with relation matches", async () => {
   const user = new Schema<{ name: string }>(
     provider,
     "AuthUser",
@@ -125,25 +126,26 @@ test("get nodes with required Relations", async () => {
     [{ id: "user", schema: "AuthUser", direction: "from", label: "ACCESS" }],
     true
   );
-  await user.createNode({ data: { name: "me" } });
-  await project.createNode({ data: { name: "website" } });
-  await project.createNode({ data: { name: "lone" } });
+  await user.createNodes([{ name: "me" }]);
+  await project.createNodes([{ name: "website" }, { name: "lone" }]);
   await project.createRelation({
-    relationId: "user",
     where: { name: "website" },
-    destinationWhere: { name: "me" },
+    relation: { id: "user", where: { name: "me" } },
   });
 
   const res = await project.getNodes({
-    requiredRelations: [
+    where: { name: "website" },
+    relations: [
       {
-        relationId: "user",
+        id: "user",
         where: { name: "me" },
       },
     ],
   });
 
-  expect(res).toStrictEqual(new Result([{ name: "website" }], undefined));
+  expect(res).toStrictEqual(
+    new Result([{ name: "website", AuthUser: [{ name: "me" }] }], undefined)
+  );
 });
 
 afterAll(async () => {

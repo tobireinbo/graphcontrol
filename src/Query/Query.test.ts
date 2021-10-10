@@ -1,4 +1,5 @@
 import Query from "./Query";
+import { provider } from "../util/provider";
 
 test("match", () => {
   const query = new Query();
@@ -43,4 +44,8 @@ test("node wheres", () => {
   expect(query.get()).toBe(
     "MATCH (n) WHERE (n)-[r:HAS]->(m) AND (n)-[r2:HAS]->(l)"
   );
+});
+
+test("execute", () => {
+  const res = Query.execute(provider, "MATCH (n) RETURN n");
 });

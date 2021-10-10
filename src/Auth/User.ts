@@ -2,7 +2,7 @@ import Neo4jProvider from "../Provider/Neo4jProvider";
 import Schema from "../Schema/Schema";
 import crypto from "crypto";
 import { v4 } from "uuid";
-import { forbiddenError } from "../Schema/Result";
+import { forbiddenError } from "../Result/Result";
 
 export default class User<ExtendendProperties> {
   private _schema: Schema<any>;
@@ -26,11 +26,13 @@ export default class User<ExtendendProperties> {
       64,
       "sha512"
     );
-    const user = await this._schema.createNode({
-      data: { username, hashedPassword, uuid: v4(), salt },
-    });
+    const user = await this._schema.createNodes([
+      {
+        data: { username, hashedPassword, uuid: v4(), salt },
+      },
+    ]);
 
-    return user;
+    return user[0];
   }
 
   async signIn(username: string, password: string) {

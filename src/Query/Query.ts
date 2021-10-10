@@ -1,3 +1,5 @@
+import Neo4jProvider from "../Provider/Neo4jProvider";
+import Result, { ErrorMessages, serverError } from "../Result/Result";
 import Util from "../util/Util";
 
 type Properties = { [key: string]: any };
@@ -5,6 +7,7 @@ export type Direction = "to" | "from" | ">" | "<" | "none";
 
 export default class Query {
   private query: string;
+  private partitionedQuery: [string, string, string, string]; //match/where, create, merge, return
   data: { [key: string]: unknown };
   private dataKeyCounter: number;
   private _lastSyntax:
@@ -14,10 +17,26 @@ export default class Query {
     | "merge"
     | "set"
     | "delete";
+
   constructor() {
     this.query = "";
     this.data = {};
     this.dataKeyCounter = 0;
+  }
+
+  static async execute(
+    provider: Neo4jProvider,
+    query: string,
+    params?: any
+  ): Promise<Result<any>> {
+    try {
+      const exeQuery = await provider.query(query, params);
+      const formatted = Neo4jProvider.formatRecords(exeQuery);
+
+      return new Result(formatted, undefined);
+    } catch (err) {
+      return serverError;
+    }
   }
 
   get(returns?: string) {
