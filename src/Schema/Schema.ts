@@ -19,7 +19,10 @@ export type Relation = {
   hops?: string;
 };
 
-type RelationQuery = { id: string; where?: Partial<_Properties> };
+type RelationQuery = {
+  id: string;
+  where?: Partial<_Properties>;
+};
 export default class Schema<Properties> {
   static Self = "__self__";
 
@@ -54,7 +57,7 @@ export default class Schema<Properties> {
    */
   async getNodes(args?: {
     where?: Partial<Properties>;
-    relations?: Array<RelationQuery>;
+    relations?: Array<RelationQuery & { optional?: boolean }>;
   }): Promise<Result<Array<Properties>>> {
     //check inputs
     if (args?.where && !this.checkInputs(args.where)) {
@@ -77,7 +80,7 @@ export default class Schema<Properties> {
         const dstLabel = this.resolveSchema(currentRelation.schema);
 
         _query
-          .optionalMatch("node")
+          .match("node", undefined, undefined, relation.optional)
           .relation(
             undefined,
             currentRelation.label,

@@ -66,7 +66,7 @@ test("create relation", async () => {
 
 test("get multiple nodes with relations", async () => {
   const result = await testSchema.getNodes({
-    relations: [{ id: "self rel" }],
+    relations: [{ id: "self rel", optional: true }],
   });
   expect(result).toStrictEqual(
     new Result(
@@ -139,6 +139,7 @@ test("get nodes with relation matches", async () => {
       {
         id: "user",
         where: { name: "me" },
+        optional: true,
       },
     ],
   });
