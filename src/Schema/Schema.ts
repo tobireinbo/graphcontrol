@@ -93,7 +93,7 @@ export default class Schema<Properties> {
           returnString += "{.*";
         }
         returnString += `, ${dstLabel}: collect(DISTINCT dst${index}{.*})`;
-        if (this._relations && index === this._relations.length - 1) {
+        if (index === args.relations.length - 1) {
           returnString += "}";
         }
       });
@@ -199,7 +199,7 @@ export default class Schema<Properties> {
    * @param args
    * @returns
    */
-  async deleteNode(args: {
+  async deleteNodes(args: {
     where: Partial<Properties>;
   }): Promise<Result<boolean>> {
     const { where } = args;

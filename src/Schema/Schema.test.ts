@@ -5,7 +5,10 @@ import Result, { ErrorMessages } from "../Result/Result";
 const testSchema = new Schema<{ uid: string; title: string; rating: number }>(
   provider,
   "Test",
-  [{ schema: Schema.Self, label: "HAS_TEST", id: "self rel" }],
+  [
+    { schema: Schema.Self, label: "HAS_TEST", id: "self rel" },
+    { schema: "User", label: "TEST", id: "test" },
+  ],
   true
 );
 
@@ -38,7 +41,7 @@ test("get single node", async () => {
 });
 
 test("delete node", async () => {
-  const result = await testSchema.deleteNode({ where: { uid: "123abc" } });
+  const result = await testSchema.deleteNodes({ where: { uid: "123abc" } });
   expect(result).toStrictEqual(new Result(true, undefined));
 });
 
@@ -93,7 +96,7 @@ test("delete relation", async () => {
 });
 
 test("delete multiple nodes", async () => {
-  const result = await testSchema.deleteNode({ where: { rating: 3 } });
+  const result = await testSchema.deleteNodes({ where: { rating: 3 } });
   expect(result).toStrictEqual(new Result(true, undefined));
   const checkDeletion = await testSchema.getNodes({ where: { rating: 3 } });
   expect(checkDeletion).toStrictEqual(new Result([], undefined));
