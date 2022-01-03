@@ -60,7 +60,7 @@ export default class Schema<Properties> {
     relations?: Array<RelationQuery & { optional?: boolean }>;
   }): Promise<Result<Array<Properties>>> {
     //check inputs
-    if (args?.where && !this.checkInputs(args.where)) {
+    if (args?.where && !this._checkInputs(args.where)) {
       return inputsError;
     }
 
@@ -77,7 +77,7 @@ export default class Schema<Properties> {
         const currentRelation = this._relations.find(
           (rel) => rel.id === relation.id
         );
-        const dstLabel = this.resolveSchema(currentRelation.schema);
+        const dstLabel = this._resolveSchema(currentRelation.schema);
 
         _query
           .match("node", undefined, undefined, relation.optional)
@@ -99,7 +99,7 @@ export default class Schema<Properties> {
       });
     }
 
-    this.Logger(_query.get(returnString), _query.data);
+    this._logger(_query.get(returnString), _query.data);
 
     try {
       const exeQuery = await this._neo4jProvider.query(
@@ -125,7 +125,7 @@ export default class Schema<Properties> {
 
     //check inputs
     for (let i = 0; i < nodes.length; i++) {
-      if (!this.checkInputs(nodes[i])) {
+      if (!this._checkInputs(nodes[i])) {
         return inputsError;
       }
 
@@ -137,7 +137,7 @@ export default class Schema<Properties> {
       }
     }
 
-    this.Logger(_query.get(), {});
+    this._logger(_query.get(), {});
 
     try {
       const exeQuery = await this._neo4jProvider.query(
@@ -164,10 +164,10 @@ export default class Schema<Properties> {
     const { where, data } = args;
 
     //check inputs
-    if (where && !this.checkInputs(where)) {
+    if (where && !this._checkInputs(where)) {
       return inputsError;
     }
-    if (data && !this.checkInputs(data)) {
+    if (data && !this._checkInputs(data)) {
       return inputsError;
     }
 
@@ -180,7 +180,7 @@ export default class Schema<Properties> {
       _query.set("node", key, data[key]);
     });
 
-    this.Logger(_query.get("node"), { ...data, ...where });
+    this._logger(_query.get("node"), { ...data, ...where });
 
     try {
       const exeQuery = await this._neo4jProvider.query(
@@ -205,7 +205,7 @@ export default class Schema<Properties> {
     const { where } = args;
 
     //check inputs
-    if (where && !this.checkInputs(where)) {
+    if (where && !this._checkInputs(where)) {
       return inputsError;
     }
 
@@ -215,7 +215,7 @@ export default class Schema<Properties> {
     });
     _query.delete(["node"], true);
 
-    this.Logger(_query.get(), { ...where });
+    this._logger(_query.get(), { ...where });
 
     try {
       const exeQuery = await this._neo4jProvider.query(
@@ -246,17 +246,17 @@ export default class Schema<Properties> {
     const { where, relation } = args;
 
     //check inputs
-    if (where && !this.checkInputs(where)) {
+    if (where && !this._checkInputs(where)) {
       return inputsError;
     }
     if (
       relation.destination.where &&
-      !this.checkInputs(relation.destination.where)
+      !this._checkInputs(relation.destination.where)
     ) {
       return inputsError;
     }
 
-    const dstLabel = this.resolveSchema(relation.destination.schema);
+    const dstLabel = this._resolveSchema(relation.destination.schema);
 
     const _query = new Query();
 
@@ -272,7 +272,7 @@ export default class Schema<Properties> {
 
     _query.merge("n1", "n2", "r", relation.label, relation.direction);
 
-    this.Logger(_query.get("r"), _query.data);
+    this._logger(_query.get("r"), _query.data);
 
     try {
       const exeQuery = await this._neo4jProvider.query(
@@ -300,10 +300,10 @@ export default class Schema<Properties> {
     const { where, relation } = args;
 
     //check inputs
-    if (where && !this.checkInputs(where)) {
+    if (where && !this._checkInputs(where)) {
       return inputsError;
     }
-    if (relation.where && !this.checkInputs(relation.where)) {
+    if (relation.where && !this._checkInputs(relation.where)) {
       return inputsError;
     }
     const currentRelation = this._relations.find((r) => r.id === relation.id);
@@ -343,7 +343,7 @@ export default class Schema<Properties> {
       throw new Error(ErrorMessages.relation);
     }
 
-    const dstLabel = this.resolveSchema(currentRelation.schema);
+    const dstLabel = this._resolveSchema(currentRelation.schema);
 
     const _query = new Query()
       .match("src", this._label, where)
@@ -357,7 +357,7 @@ export default class Schema<Properties> {
 
     _query.delete(["r"]);
 
-    this.Logger(_query.get(), _query.data);
+    this._logger(_query.get(), _query.data);
 
     try {
       const exeQuery = await this._neo4jProvider.query(
@@ -407,11 +407,11 @@ export default class Schema<Properties> {
     return this;
   }
 
-  private resolveSchema(schema: string) {
+  private _resolveSchema(schema: string) {
     return schema === Schema.Self ? this._label : schema;
   }
 
-  private checkRelations(
+  private _checkRelations(
     query: Query,
     relations: Array<RelationQuery> | undefined
   ) {
@@ -435,7 +435,7 @@ export default class Schema<Properties> {
    * checks input data in order to prevent cypher injections
    * @param data
    */
-  private checkInputs(data: Partial<_Properties> | _Properties) {
+  private _checkInputs(data: Partial<_Properties> | _Properties) {
     //const regex = new RegExp(/[{}()\[\]:;]/g); //exclude these chars
     const regex = new RegExp(/["'`]/g);
     let legal = true;
@@ -453,7 +453,7 @@ export default class Schema<Properties> {
     return legal;
   }
 
-  private Logger(query: string, data: {}) {
+  private _logger(query: string, data: {}) {
     if (this.__queryLogs) {
       console.log("QUERY::::::", query);
       console.log("DATA::::::", data);

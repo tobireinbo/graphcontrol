@@ -6,10 +6,10 @@ type Properties = { [key: string]: any };
 export type Direction = "to" | "from" | ">" | "<" | "none";
 
 export default class Query {
-  private query: string;
-  private partitionedQuery: [string, string, string, string]; //match/where, create, merge, return
-  data: { [key: string]: unknown };
-  private dataKeyCounter: number;
+  private _query: string;
+  private _partitionedQuery: [string, string, string, string]; //match/where, create, merge, return
+  public data: { [key: string]: unknown };
+  private _dataKeyCounter: number;
   private _lastSyntax:
     | "match"
     | "where"
@@ -19,9 +19,9 @@ export default class Query {
     | "delete";
 
   constructor() {
-    this.query = "";
+    this._query = "";
     this.data = {};
-    this.dataKeyCounter = 0;
+    this._dataKeyCounter = 0;
   }
 
   static async execute(
@@ -41,9 +41,9 @@ export default class Query {
 
   get(returns?: string) {
     if (returns) {
-      return this.query + ` RETURN ${returns}`;
+      return this._query + ` RETURN ${returns}`;
     }
-    return this.query;
+    return this._query;
   }
 
   match(
@@ -52,9 +52,9 @@ export default class Query {
     properties?: Properties,
     optional?: boolean
   ) {
-    this.insertWhiteSpace();
+    this._insertWhiteSpace();
 
-    this.query += `${optional ? "OPTIONAL " : ""}MATCH `;
+    this._query += `${optional ? "OPTIONAL " : ""}MATCH `;
     this.node(varName, label, properties);
 
     this._lastSyntax = "match";
@@ -67,9 +67,9 @@ export default class Query {
   }
 
   create(varName?: string, label?: string, properties?: Properties) {
-    this.insertWhiteSpace();
+    this._insertWhiteSpace();
 
-    this.query += `CREATE `;
+    this._query += `CREATE `;
     this.node(varName, label, properties);
 
     this._lastSyntax = "create";
@@ -86,7 +86,7 @@ export default class Query {
         if (index < length - 1) props += ", ";
         else props += "}";
       });
-    this.query += `(${varName ? varName : ""}${
+    this._query += `(${varName ? varName : ""}${
       label ? ":" + label : ""
     }${props})`;
 
@@ -94,9 +94,9 @@ export default class Query {
   }
 
   merge(var1, var2, relVar, relLabel, direction: Direction) {
-    this.insertWhiteSpace();
+    this._insertWhiteSpace();
 
-    this.query += "MERGE ";
+    this._query += "MERGE ";
     this.node(var1).relation(relVar, relLabel, direction).node(var2);
 
     this._lastSyntax = "merge";
@@ -112,18 +112,18 @@ export default class Query {
     const isTo = direction === "to" || direction === ">";
     const isNone = direction === "none";
     //prettier-ignore
-    this.query += `${!isTo && !isNone  ? "<" : ""}-[${varName ? varName : ""}${label ? ":" + label : ""}${hops ? hops : ""}]-${isTo && !isNone? ">" : ""}`;
+    this._query += `${!isTo && !isNone  ? "<" : ""}-[${varName ? varName : ""}${label ? ":" + label : ""}${hops ? hops : ""}]-${isTo && !isNone? ">" : ""}`;
 
     return this;
   }
 
   where(varName?: string, key?: string, value?: unknown, not?: boolean) {
-    this.insertWhiteSpace();
+    this._insertWhiteSpace();
 
     const syntax = this._lastSyntax === "where" ? "AND" : "WHERE";
 
     const dataKey = this.addToData(key, value);
-    this.query += `${syntax}${
+    this._query += `${syntax}${
       not ? " NOT" : ""
     } ${varName}.${key} = $${dataKey}`;
 
@@ -132,33 +132,33 @@ export default class Query {
   }
 
   whereNode(varName?: string) {
-    this.insertWhiteSpace();
+    this._insertWhiteSpace();
 
     const syntax = this._lastSyntax === "where" ? "AND" : "WHERE";
 
-    this.query += `${syntax} (${varName})`;
+    this._query += `${syntax} (${varName})`;
 
     this._lastSyntax = "where";
     return this;
   }
 
   set(varName: string, key: string, value: unknown) {
-    this.insertWhiteSpace();
+    this._insertWhiteSpace();
 
     const dataKey = this.addToData(key, value);
-    this.query += `SET ${varName}.${key} = $${dataKey}`;
+    this._query += `SET ${varName}.${key} = $${dataKey}`;
 
     this._lastSyntax = "set";
     return this;
   }
   delete(vars: Array<string>, detach?: boolean) {
-    this.insertWhiteSpace();
+    this._insertWhiteSpace();
 
-    this.query += `${detach ? "DETACH " : ""}DELETE `;
+    this._query += `${detach ? "DETACH " : ""}DELETE `;
     vars.forEach((v, index) => {
-      this.query += v;
+      this._query += v;
       if (index < vars.length - 1) {
-        this.query += ", ";
+        this._query += ", ";
       }
     });
 
@@ -167,13 +167,13 @@ export default class Query {
   }
 
   addToData(key: string, value: unknown) {
-    const uniqueKey = key + this.dataKeyCounter;
+    const uniqueKey = key + this._dataKeyCounter;
     Object.assign(this.data, { [uniqueKey]: value });
-    this.dataKeyCounter++;
+    this._dataKeyCounter++;
     return uniqueKey;
   }
 
-  private insertWhiteSpace() {
-    if (this._lastSyntax) this.query += " ";
+  private _insertWhiteSpace() {
+    if (this._lastSyntax) this._query += " ";
   }
 }

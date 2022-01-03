@@ -3,16 +3,16 @@ import neo4j, { Driver, QueryResult } from "neo4j-driver";
 export default class Neo4jProvider {
   private _driver: Driver;
   constructor(
-    private setup: {
+    private _setup: {
       url: string | undefined;
       username: string | undefined;
       password: string | undefined;
     }
   ) {
-    if (this.setup.url && this.setup.username && this.setup.password) {
+    if (this._setup.url && this._setup.username && this._setup.password) {
       this._driver = neo4j.driver(
-        this.setup.url,
-        neo4j.auth.basic(this.setup.username, this.setup.password)
+        this._setup.url,
+        neo4j.auth.basic(this._setup.username, this._setup.password)
       );
     } else {
       throw new Error("credentials are undefined");
@@ -82,8 +82,8 @@ export default class Neo4jProvider {
    * formats the matched nodes into a nested tree structure.
    * apoc is required to use this function.
    * note that the matched nodes can't have an _id property,
-   * otherwise the function will not properly work since the prop name is
-   * already used by apoc.
+   * otherwise the function will not properly work since _id is
+   * already used by apoc to successfully create a nested tree.
    * @param match cypher match query
    * @param params object containing data for cypher parameters
    * @returns an object containing all matched notes and their nested Nodes
