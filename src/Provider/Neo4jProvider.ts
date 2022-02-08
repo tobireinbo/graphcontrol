@@ -12,7 +12,8 @@ export default class Neo4jProvider {
     if (this._setup.url && this._setup.username && this._setup.password) {
       this._driver = neo4j.driver(
         this._setup.url,
-        neo4j.auth.basic(this._setup.username, this._setup.password)
+        neo4j.auth.basic(this._setup.username, this._setup.password),
+        { disableLosslessIntegers: true } //Loss of precision for large integers outside of safe range
       );
     } else {
       throw new Error("credentials are undefined");
